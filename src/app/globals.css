@@ -1,26 +1,166 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  --gold: #C5A059;
+  --gold-light: #D4B76A;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Gold Accent Colors */
+.text-gold {
+  color: #C5A059;
+}
+
+.bg-gold {
+  background-color: #C5A059;
+}
+
+.border-gold {
+  border-color: #C5A059;
+}
+
+.hover-gold:hover {
+  color: #C5A059;
+}
+
+.hover-border-gold:hover {
+  border-color: #C5A059;
+}
+
+/* Selection */
+::selection {
+  background-color: #C5A059;
+  color: white;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f4f4f5;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #d4d4d8;
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #a1a1aa;
+}
+
+/* Service Card Hover */
+.service-card {
+  transition: all 0.3s ease;
+}
+
+.service-card:hover {
+  border-color: rgba(197, 160, 89, 0.5);
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.1);
+}
+
+.service-card:hover .icon-box {
+  background-color: #C5A059;
+  color: white;
+}
+
+/* Card lift effect */
+.hover-lift {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.hover-lift:hover {
+  transform: translateY(-4px);
+}
+
+/* ========================================
+   Themed Background Patterns (Medium Opacity)
+   ======================================== */
+
+/* Tarot - Mystical Stars Pattern */
+.bg-pattern-tarot {
+  background-image:
+    radial-gradient(circle at 20% 80%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 5l2 6h6l-5 4 2 6-5-4-5 4 2-6-5-4h6z' fill='%238b5cf6' fill-opacity='0.08'/%3E%3C/svg%3E");
+}
+
+/* Bazi - Chinese Pattern (yin-yang inspired) */
+.bg-pattern-bazi {
+  background-image:
+    radial-gradient(circle at 30% 70%, rgba(185, 28, 28, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 70% 30%, rgba(217, 119, 6, 0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='80' height='80' viewBox='0 0 80 80' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='40' cy='40' r='20' fill='none' stroke='%23b91c1c' stroke-opacity='0.08' stroke-width='2'/%3E%3Ccircle cx='40' cy='30' r='5' fill='%23b91c1c' fill-opacity='0.08'/%3E%3Ccircle cx='40' cy='50' r='5' fill='%23d97706' fill-opacity='0.08'/%3E%3C/svg%3E");
+}
+
+/* Human Design - DNA/Hexagon Pattern */
+.bg-pattern-humandesign {
+  background-image:
+    radial-gradient(circle at 25% 75%, rgba(20, 184, 166, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 75% 25%, rgba(6, 182, 212, 0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='56' height='100' viewBox='0 0 56 100' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M28 66L0 50L0 16L28 0L56 16L56 50L28 66L28 100' fill='none' stroke='%2314b8a6' stroke-opacity='0.08' stroke-width='1'/%3E%3C/svg%3E");
+}
+
+/* Astrology - Constellation Pattern */
+.bg-pattern-astrology {
+  background-image:
+    radial-gradient(circle at 20% 20%, rgba(79, 70, 229, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 80%, rgba(59, 130, 246, 0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='100' height='100' viewBox='0 0 100 100' xmlns='http://www.w3.org/2000/svg'%3E%3Ccircle cx='10' cy='10' r='2' fill='%234f46e5' fill-opacity='0.1'/%3E%3Ccircle cx='90' cy='90' r='2' fill='%234f46e5' fill-opacity='0.1'/%3E%3Ccircle cx='50' cy='50' r='3' fill='%234f46e5' fill-opacity='0.1'/%3E%3Cline x1='10' y1='10' x2='50' y2='50' stroke='%234f46e5' stroke-opacity='0.06' stroke-width='1'/%3E%3Cline x1='50' y1='50' x2='90' y2='90' stroke='%234f46e5' stroke-opacity='0.06' stroke-width='1'/%3E%3C/svg%3E");
+}
+
+/* Ziwei - Royal Pattern (imperial clouds) */
+.bg-pattern-ziwei {
+  background-image:
+    radial-gradient(circle at 10% 90%, rgba(139, 92, 246, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 90% 10%, rgba(192, 132, 252, 0.08) 0%, transparent 50%),
+    url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 15 Q45 15 45 30 Q45 45 30 45 Q15 45 15 30 Q15 15 30 15' fill='none' stroke='%238b5cf6' stroke-opacity='0.08' stroke-width='1'/%3E%3C/svg%3E");
+}
+
+/* Integration - Cosmic Grid Pattern */
+.bg-pattern-integration {
+  background-image:
+    radial-gradient(circle at 50% 50%, rgba(99, 102, 241, 0.08) 0%, transparent 70%),
+    url("data:image/svg+xml,%3Csvg width='40' height='40' viewBox='0 0 40 40' xmlns='http://www.w3.org/2000/svg'%3E%3Cline x1='0' y1='20' x2='40' y2='20' stroke='%236366f1' stroke-opacity='0.06' stroke-width='1'/%3E%3Cline x1='20' y1='0' x2='20' y2='40' stroke='%236366f1' stroke-opacity='0.06' stroke-width='1'/%3E%3C/svg%3E");
+}
+
+/* Pattern classes are applied directly via className in page.tsx */
+
+/* Smooth animations */
+.animate-fade-up {
+  animation: fadeUp 0.6s ease-out forwards;
+}
+
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Floating animation for icons */
+@keyframes float {
+
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
 }
