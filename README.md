@@ -14,6 +14,8 @@
 - ⭐ **西洋占星** - 行星位置、相位與星盤分析
 - 🌙 **紫微斗數** - 十二宮位與主星分析
 - 🔗 **綜合分析** - AI 整合所有系統的智慧解讀
+- 🎨 **視覺強化** - 星座行星符號化、動態載入提示與精美卡片介面
+- 🔧 **後台管理** - 內建管理員儀表板，可查看使用數據與管理 API Key
 
 ## 🚀 快速開始
 
@@ -44,8 +46,13 @@ npm run dev
 建立 `.env.local` 檔案：
 
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:5001
+NEXT_PUBLIC_API_URL=http://localhost:5000
 ```
+
+### 後台管理
+
+訪問 [http://localhost:3000/admin/login](http://localhost:3000/admin/login) 進入管理員登入頁面。
+預設帳號：`admin` / `admin123`
 
 ## 📁 專案結構
 
@@ -53,7 +60,10 @@ NEXT_PUBLIC_API_URL=http://localhost:5001
 spiritual-advisor-web/
 ├── src/
 │   ├── app/              # Next.js App Router
+│   │   ├── admin/        # 管理員後台
+│   │   └── page.tsx      # 主頁面
 │   ├── components/       # React 元件
+│   │   ├── IntegrationSection.tsx # 綜合分析與視覺整合
 │   │   ├── TarotSection.tsx
 │   │   ├── BaziSection.tsx
 │   │   ├── HumanDesignSection.tsx
