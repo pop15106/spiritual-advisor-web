@@ -24,10 +24,28 @@ export default function ZiweiSection() {
     const [error, setError] = useState<string | null>(null);
     const [birthDate, setBirthDate] = useState("1990-01-01");
     const [birthHour, setBirthHour] = useState(3);
+    const [selectedPalace, setSelectedPalace] = useState<string | null>(null);
+
+    const DIZHI_ORDER = ['子', '丑', '寅', '卯', '辰', '巳', '午', '未', '申', '酉', '戌', '亥'];
+
+    const getRelation = (target: string) => {
+        if (!selectedPalace) return null;
+        if (target === selectedPalace) return 'self';
+
+        const tIdx = DIZHI_ORDER.indexOf(target);
+        const sIdx = DIZHI_ORDER.indexOf(selectedPalace);
+        if (tIdx === -1 || sIdx === -1) return null;
+
+        const diff = Math.abs(tIdx - sIdx);
+        if (diff === 6) return 'opposite'; // 對宮
+        if (diff === 4 || diff === 8) return 'harmony'; // 三合
+        return null;
+    };
 
     const calculateChart = async () => {
         setLoading(true);
         setError(null);
+        setSelectedPalace(null);
         try {
             const response = await ziweiApi.calculate(birthDate, birthHour);
             setZiweiData(response);
@@ -37,6 +55,58 @@ export default function ZiweiSection() {
         } finally {
             setLoading(false);
         }
+    };
+
+    const renderPalaceCell = (dz: string) => {
+        if (!ziweiData) return null;
+
+        const palace = Object.entries(ziweiData.palaces).find(([_, data]) =>
+            typeof data === 'object' && (data as any).dizhi === dz
+        );
+        const palaceName = palace ? palace[0] : '';
+        const stars = palace && typeof palace[1] === 'object' ? (palace[1] as any).stars?.join(' ') || '' : palace?.[1] || '';
+        const isMing = palaceName === '命宮';
+        const relation = getRelation(dz);
+
+        // Dynamic styles based on relation
+        let bgStyle = isMing ? 'bg-violet-50 border-violet-200' : 'bg-white border-slate-200';
+        let borderStyle = '';
+        let shadowStyle = '';
+
+        if (relation === 'self') {
+            bgStyle = 'bg-violet-100 border-violet-500';
+            shadowStyle = 'shadow-md ring-2 ring-violet-300 ring-offset-1 z-10';
+        } else if (relation === 'opposite') {
+            bgStyle = 'bg-blue-50 border-blue-400 border-dashed';
+            shadowStyle = 'ring-2 ring-blue-200 ring-offset-1';
+        } else if (relation === 'harmony') {
+            bgStyle = 'bg-emerald-50 border-emerald-400';
+            shadowStyle = 'ring-2 ring-emerald-200 ring-offset-1';
+        }
+
+        return (
+            <div
+                key={dz}
+                onClick={() => setSelectedPalace(dz === selectedPalace ? null : dz)}
+                className={`aspect-square p-2 border rounded-lg flex flex-col justify-between text-center cursor-pointer transition-all duration-200 hover:shadow-md ${bgStyle} ${borderStyle} ${shadowStyle}`}
+            >
+                <div className="flex justify-between items-start">
+                    <span className="text-xs text-slate-400 font-mono">{dz}</span>
+                    {relation && (
+                        <span className={`text-[10px] px-1 rounded-full ${relation === 'self' ? 'bg-violet-200 text-violet-700' :
+                            relation === 'opposite' ? 'bg-blue-100 text-blue-600' :
+                                'bg-emerald-100 text-emerald-600'
+                            }`}>
+                            {relation === 'self' ? '本宮' : relation === 'opposite' ? '對宮' : '三合'}
+                        </span>
+                    )}
+                </div>
+                <div className={`text-xs font-medium ${isMing ? 'text-violet-700' : 'text-slate-600'}`}>{palaceName}</div>
+                <div className={`text-xs font-bold leading-tight line-clamp-2 ${isMing ? 'text-violet-900' : 'text-slate-700'}`}>
+                    {stars || <span className="text-slate-300 font-normal">無主星</span>}
+                </div>
+            </div>
+        );
     };
 
     return (
@@ -106,8 +176,19 @@ export default function ZiweiSection() {
 
             {ziweiData && (
                 <>
+                    {/* 農曆與基本資訊 */}
+                    {ziweiData.lunar_date && (
+                        <div className="bg-gradient-to-r from-slate-50 to-gray-50 rounded-xl p-4 mb-6 border border-slate-200">
+                            <div className="flex flex-wrap gap-4 items-center justify-center">
+                                <span className="text-sm text-slate-600">📅 農曆：<span className="font-bold text-slate-800">{ziweiData.lunar_date}</span></span>
+                                {ziweiData.wuxing_ju && <span className="text-sm text-slate-600">🔮 五行局：<span className="font-bold text-purple-700">{ziweiData.wuxing_ju}</span></span>}
+                                {ziweiData.ming_palace_dizhi && <span className="text-sm text-slate-600">🏛️ 命宮：<span className="font-bold text-violet-700">{ziweiData.ming_palace_dizhi}宮</span></span>}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Main Stars */}
-                    <div className="grid md:grid-cols-3 gap-6 mb-8">
+                    <div className="grid md:grid-cols-3 gap-6 mb-6">
                         <div className="bg-gradient-to-br from-violet-50 to-purple-50 rounded-2xl p-6 border border-violet-200">
                             <div className="text-3xl mb-3">⭐</div>
                             <h3 className="text-sm font-medium text-violet-600 mb-1">命宮主星</h3>
@@ -125,19 +206,61 @@ export default function ZiweiSection() {
                         </div>
                     </div>
 
-                    {/* Twelve Palaces */}
-                    <div className="bg-white rounded-2xl border border-violet-100 shadow-lg overflow-hidden mb-8">
-                        <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-4">
-                            <h3 className="text-lg font-medium text-white">🏛️ 十二宮位</h3>
+                    {/* 四化 */}
+                    {ziweiData.si_hua && (
+                        <div className="bg-gradient-to-r from-cyan-50 to-teal-50 rounded-xl p-4 mb-6 border border-cyan-200">
+                            <div className="flex items-center gap-2 mb-2">
+                                <span className="text-lg">🌊</span>
+                                <span className="text-sm font-bold text-cyan-800">本年四化</span>
+                            </div>
+                            <p className="text-sm text-cyan-700">{ziweiData.si_hua}</p>
                         </div>
-                        <div className="p-6">
-                            <div className="grid grid-cols-3 md:grid-cols-4 gap-3">
-                                {Object.entries(ziweiData.palaces).map(([palace, star], idx) => (
-                                    <div key={idx} className={`rounded-xl p-3 text-center border ${idx === 0 ? 'bg-violet-100 border-violet-300' : 'bg-slate-50 border-slate-200'}`}>
-                                        <div className="text-xs text-slate-500 mb-1">{palace}</div>
-                                        <div className={`font-semibold ${idx === 0 ? 'text-violet-700' : 'text-slate-700'}`}>{star}</div>
+                    )}
+
+                    {/* Traditional 4x4 Ziwei Chart Grid */}
+                    <div className="bg-white rounded-2xl border border-violet-100 shadow-lg overflow-hidden mb-8">
+                        <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-4 flex justify-between items-center">
+                            <h3 className="text-lg font-medium text-white">🏛️ 紫微命盤</h3>
+                            <span className="text-xs text-violet-200 bg-white/10 px-2 py-1 rounded">
+                                {selectedPalace ? "點擊其他宮位查看關係" : "點擊宮位查看三方四正"}
+                            </span>
+                        </div>
+                        <div className="p-4">
+                            {/* Traditional 4x4 Grid Layout */}
+                            <div className="grid grid-cols-4 gap-1 max-w-2xl mx-auto">
+                                {/* Row 1: 巳 午 未 申 */}
+                                {/* Row 1: 巳 午 未 申 */}
+                                {['巳', '午', '未', '申'].map(renderPalaceCell)}
+
+                                {/* Row 2: 辰 + Center + 酉 */}
+                                {/* Row 2: 辰 + Center + 酉 */}
+                                {['辰'].map(renderPalaceCell)}
+                                {/* Center cells (span 2 rows) */}
+                                <div className="col-span-2 row-span-2 bg-gradient-to-br from-purple-50 to-violet-50 border border-purple-200 rounded-lg p-3 flex flex-col justify-center items-center">
+                                    <div className="text-lg font-bold text-purple-800 mb-2">紫微斗數</div>
+                                    <div className="text-xs text-purple-600 space-y-1 text-center">
+                                        <div>命主: <span className="font-bold">{ziweiData.mingzhu}</span></div>
+                                        <div>身主: <span className="font-bold">{ziweiData.shenzhu}</span></div>
+                                        <div>五行局: <span className="font-bold">{ziweiData.wuxing_ju}</span></div>
                                     </div>
-                                ))}
+                                    {selectedPalace && (
+                                        <div className="mt-4 pt-4 border-t border-purple-200 w-full text-center">
+                                            <div className="text-xs text-purple-500 mb-1">當前選取</div>
+                                            <div className="font-bold text-purple-800 text-lg">{selectedPalace}宮</div>
+                                        </div>
+                                    )}
+                                </div>
+                                {['酉'].map(renderPalaceCell)}
+
+                                {/* Row 3: 卯 + Center + 戌 */}
+                                {/* Row 3: 卯 + Center + 戌 */}
+                                {['卯'].map(renderPalaceCell)}
+                                {/* The center 2x2 is already done with row-span-2 above */}
+                                {['戌'].map(renderPalaceCell)}
+
+                                {/* Row 4: 寅 丑 子 亥 */}
+                                {/* Row 4: 寅 丑 子 亥 */}
+                                {['寅', '丑', '子', '亥'].map(renderPalaceCell)}
                             </div>
                         </div>
                     </div>

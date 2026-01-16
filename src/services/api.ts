@@ -163,12 +163,23 @@ export const astrologyApi = {
 
 // ========== 紫微斗數 API ==========
 
+export interface ZiweiPalace {
+  dizhi: string;
+  stars: string[];
+  stars_str: string;
+}
+
 export interface ZiweiResponse {
   success: boolean;
   main_star: string;
   mingzhu: string;
   shenzhu: string;
-  palaces: Record<string, string>;
+  wuxing_ju?: string;
+  ming_palace_dizhi?: string;
+  shen_palace_dizhi?: string;
+  lunar_date?: string;
+  si_hua?: string;
+  palaces: Record<string, ZiweiPalace>;
   interpretation: string;
 }
 
@@ -190,13 +201,43 @@ export interface IntegrationResponse {
   question: string;
   analysis: string;
   source: 'gemini' | 'demo';
+  model?: string;
+  system_data?: {
+    tarot?: {
+      spread_name: string;
+      cards: string[];
+    };
+    humandesign?: {
+      type: string;
+      strategy?: string;
+      summary: string;
+    };
+    astrology?: {
+      sun_sign?: string;
+      moon_sign?: string;
+      summary: string;
+    };
+    ziwei?: {
+      main_star?: string;
+      ming_palace?: string;
+      summary: string;
+    };
+  };
+}
+
+export interface IntegrationBirthData {
+  date?: string;          // "1990-01-01"
+  time?: string;          // "06:00"
+  hour?: number;          // 時辰 0-11
+  gender?: 'male' | 'female';
+  city?: { name: string; lat: number; lng: number };
 }
 
 export const integrationApi = {
-  analyze: (question: string): Promise<IntegrationResponse> =>
+  analyze: (question: string, systems?: string[], birthData?: IntegrationBirthData): Promise<IntegrationResponse> =>
     fetchApi('/integration/analyze', {
       method: 'POST',
-      body: JSON.stringify({ question }),
+      body: JSON.stringify({ question, systems, birth_data: birthData }),
     }),
 };
 
