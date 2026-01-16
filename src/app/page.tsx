@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TarotSection from "@/components/TarotSection";
 import BaziSection from "@/components/BaziSection";
 import HumanDesignSection from "@/components/HumanDesignSection";
@@ -20,6 +20,34 @@ const services = [
 export default function Home() {
   const [activeSection, setActiveSection] = useState<string | null>(null);
 
+  // Browser history support for mouse side buttons (back/forward)
+  useEffect(() => {
+    // Read initial state from URL hash
+    const hash = window.location.hash.slice(1); // Remove '#'
+    if (hash && services.some(s => s.id === hash)) {
+      setActiveSection(hash);
+    }
+
+    // Handle browser back/forward navigation (mouse side buttons)
+    const handlePopState = (event: PopStateEvent) => {
+      const section = event.state?.section || null;
+      setActiveSection(section);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Update URL and history when section changes
+  const navigateToSection = (sectionId: string | null) => {
+    if (sectionId) {
+      window.history.pushState({ section: sectionId }, '', `#${sectionId}`);
+    } else {
+      window.history.pushState({ section: null }, '', window.location.pathname);
+    }
+    setActiveSection(sectionId);
+  };
+
   if (activeSection) {
     // Get pattern class based on active section
     const patternClass = {
@@ -37,7 +65,7 @@ export default function Home() {
         <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100/50">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <button
-              onClick={() => setActiveSection(null)}
+              onClick={() => navigateToSection(null)}
               className="flex items-center gap-2 text-sm font-medium text-zinc-500 hover:text-zinc-900 transition-colors"
             >
               ← 返回首頁
@@ -135,7 +163,7 @@ export default function Home() {
             {services.map((service) => (
               <div
                 key={service.id}
-                onClick={() => setActiveSection(service.id)}
+                onClick={() => navigateToSection(service.id)}
                 className="service-card bg-white p-8 rounded-2xl border border-zinc-200 cursor-pointer group"
               >
                 <div className="icon-box w-14 h-14 bg-zinc-50 rounded-xl flex items-center justify-center mb-6 text-2xl transition-colors duration-300">

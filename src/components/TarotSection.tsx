@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { tarotApi, TarotCard } from "@/services/api";
 
+// Demo 資料已註解，改用 API
+/*
 const MAJOR_ARCANA = [
     { name: "愚者", id: "ar00" }, { name: "魔術師", id: "ar01" }, { name: "女祭司", id: "ar02" },
     { name: "皇后", id: "ar03" }, { name: "皇帝", id: "ar04" }, { name: "教皇", id: "ar05" },
@@ -12,18 +15,28 @@ const MAJOR_ARCANA = [
     { name: "月亮", id: "ar18" }, { name: "太陽", id: "ar19" }, { name: "審判", id: "ar20" },
     { name: "世界", id: "ar21" },
 ];
-
-interface DrawnCard { name: string; id: string; reversed: boolean; }
+*/
 
 export default function TarotSection() {
     const [question, setQuestion] = useState("");
-    const [cards, setCards] = useState<DrawnCard[]>([]);
+    const [cards, setCards] = useState<TarotCard[]>([]);
+    const [positions, setPositions] = useState<string[]>([]);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-    const drawCards = () => {
-        const shuffled = [...MAJOR_ARCANA].sort(() => Math.random() - 0.5);
-        setCards(shuffled.slice(0, 3).map((card) => ({
-            ...card, reversed: Math.random() > 0.5,
-        })));
+    const drawCards = async () => {
+        setLoading(true);
+        setError(null);
+        try {
+            const response = await tarotApi.draw(3);
+            setCards(response.cards);
+            setPositions(response.positions);
+        } catch (err) {
+            setError("無法連接後端 API，請確認後端服務已啟動");
+            console.error("Tarot API error:", err);
+        } finally {
+            setLoading(false);
+        }
     };
 
     return (
@@ -65,10 +78,15 @@ export default function TarotSection() {
 
                 <button
                     onClick={drawCards}
-                    className="mt-6 w-full bg-gradient-to-r from-purple-600 to-violet-600 text-white text-sm font-medium py-4 rounded-full hover:from-purple-700 hover:to-violet-700 transition-all shadow-lg shadow-purple-200 hover:shadow-xl hover:shadow-purple-300"
+                    disabled={loading}
+                    className="mt-6 w-full bg-gradient-to-r from-purple-600 to-violet-600 text-white text-sm font-medium py-4 rounded-full hover:from-purple-700 hover:to-violet-700 transition-all shadow-lg shadow-purple-200 hover:shadow-xl hover:shadow-purple-300 disabled:opacity-50"
                 >
-                    ✨ 抽取三張牌
+                    {loading ? "🔄 抽牌中..." : "✨ 抽取三張牌"}
                 </button>
+
+                {error && (
+                    <p className="mt-4 text-red-500 text-sm text-center">{error}</p>
+                )}
             </div>
 
             {/* Drawn Cards */}
@@ -80,14 +98,14 @@ export default function TarotSection() {
                             <div key={idx} className="group">
                                 <div className="aspect-[2/3] bg-gradient-to-br from-purple-100 to-violet-100 rounded-xl overflow-hidden border-2 border-purple-200 shadow-lg hover:shadow-xl transition-all hover:-translate-y-2">
                                     <img
-                                        src={`https://www.sacred-texts.com/tarot/pkt/img/${card.id}.jpg`}
+                                        src={card.imageUrl}
                                         alt={card.name}
                                         className={`w-full h-full object-cover ${card.reversed ? "rotate-180" : ""}`}
                                     />
                                 </div>
                                 <div className="mt-4 text-center">
                                     <p className="text-xs text-purple-600 font-semibold uppercase tracking-wider">
-                                        {["過去", "現在", "未來"][idx]}
+                                        {positions[idx] || ["過去", "現在", "未來"][idx]}
                                     </p>
                                     <p className="text-base font-medium text-zinc-900 mt-1">
                                         {card.name}
@@ -110,17 +128,39 @@ export default function TarotSection() {
                     </div>
                     <div className="p-6 space-y-6">
                         {cards.map((card, idx) => (
-                            <div key={idx} className="border-l-4 border-purple-400 pl-6 py-2">
+                            <div key={idx} className="border-l-4 border-purple-400 pl-6 py-3">
                                 <h4 className="font-semibold text-zinc-900 mb-2">
-                                    <span className="text-purple-600">{["過去", "現在", "未來"][idx]}</span> · {card.name}
+                                    <span className="text-purple-600">{positions[idx] || ["過去", "現在", "未來"][idx]}</span> · {card.name}
                                     <span className={`ml-2 text-sm ${card.reversed ? "text-red-500" : "text-emerald-500"}`}>
                                         {card.reversed ? "(逆位)" : "(正位)"}
                                     </span>
                                 </h4>
-                                <p className="text-zinc-500 leading-relaxed">
-                                    {idx === 0 && "這張牌揭示了您過去的經歷與能量基礎，它塑造了您現在面對的處境。"}
-                                    {idx === 1 && "這張牌反映您當前的狀態、挑戰與機會。注意它帶給您的直覺感受。"}
-                                    {idx === 2 && "這張牌暗示未來的可能發展。記住，未來不是固定的，而是指引。"}
+
+                                {/* Card Meaning */}
+                                <p className="text-zinc-600 mb-3 leading-relaxed">
+                                    {card.meaning}
+                                </p>
+
+                                {/* Keywords */}
+                                <div className="flex flex-wrap gap-2 mb-3">
+                                    {card.keywords.split("、").map((keyword, kidx) => (
+                                        <span
+                                            key={kidx}
+                                            className={`px-2 py-1 rounded-full text-xs font-medium ${card.reversed
+                                                    ? "bg-red-50 text-red-600 border border-red-200"
+                                                    : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                                                }`}
+                                        >
+                                            {keyword}
+                                        </span>
+                                    ))}
+                                </div>
+
+                                {/* Position Context */}
+                                <p className="text-sm text-zinc-400 italic">
+                                    {idx === 0 && "💫 過去的能量影響：這張牌揭示了您過去的經歷，它塑造了您現在的處境。"}
+                                    {idx === 1 && "⚡ 現在的狀態：這張牌反映您當前的挑戰與機會。注意它帶來的直覺感受。"}
+                                    {idx === 2 && "🌟 未來的指引：這張牌暗示可能的發展方向。記住，未來是可以改變的。"}
                                 </p>
                             </div>
                         ))}
