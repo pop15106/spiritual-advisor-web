@@ -1,36 +1,78 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 🔮 Spiritual Advisor Web (靈性顧問網站)
 
-## Getting Started
+一個整合多種占卜系統的現代化靈性諮詢平台，提供塔羅牌、八字命理、人類圖、西洋占星與紫微斗數的綜合分析。
 
-First, run the development server:
+![Next.js](https://img.shields.io/badge/Next.js-15.x-black?logo=next.js)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.x-blue?logo=typescript)
+![TailwindCSS](https://img.shields.io/badge/TailwindCSS-3.x-38B2AC?logo=tailwindcss)
+
+## ✨ 功能特色
+
+- 🃏 **塔羅牌占卜** - 22張大阿爾克納牌的專業解讀
+- 📅 **八字命理** - 根據出生時辰計算四柱八字與流年運勢
+- 🧬 **人類圖分析** - 精準計算64閘門、通道與能量中心
+- ⭐ **西洋占星** - 行星位置、相位與星盤分析
+- 🌙 **紫微斗數** - 十二宮位與主星分析
+- 🔗 **綜合分析** - AI 整合所有系統的智慧解讀
+
+## 🚀 快速開始
+
+### 前置需求
+
+- Node.js 18+ 
+- npm 或 yarn
+- 後端 API 服務 (見 [spiritual-ai-advisor](https://github.com/pop15106/spiritual-ai-advisor))
+
+### 安裝步驟
 
 ```bash
+# 複製專案
+git clone https://github.com/pop15106/spiritual-advisor-web.git
+cd spiritual-advisor-web
+
+# 安裝依賴
+npm install
+
+# 啟動開發伺服器
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+在瀏覽器開啟 [http://localhost:3000](http://localhost:3000) 即可使用。
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 環境設定
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+建立 `.env.local` 檔案：
 
-## Learn More
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5001
+```
 
-To learn more about Next.js, take a look at the following resources:
+## 📁 專案結構
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```
+spiritual-advisor-web/
+├── src/
+│   ├── app/              # Next.js App Router
+│   ├── components/       # React 元件
+│   │   ├── TarotSection.tsx
+│   │   ├── BaziSection.tsx
+│   │   ├── HumanDesignSection.tsx
+│   │   ├── AstrologySection.tsx
+│   │   └── ZiweiSection.tsx
+│   └── services/         # API 服務
+│       └── api.ts
+├── public/               # 靜態資源
+└── package.json
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🔧 相關專案
 
-## Deploy on Vercel
+- **後端 API**: [spiritual-ai-advisor](https://github.com/pop15106/spiritual-ai-advisor) - Python Flask API 服務
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 📝 授權
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+MIT License
+
+## 👤 作者
+
+- GitHub: [@pop15106](https://github.com/pop15106)
