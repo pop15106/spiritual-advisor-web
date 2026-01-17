@@ -16,6 +16,9 @@ interface AuthContextType {
     login: (credential: string) => Promise<boolean>;
     logout: () => void;
     isLoggedIn: boolean;
+    freeTrials: number;
+    fetchTrials: () => Promise<void>;
+    useTrial: () => Promise<boolean>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -24,6 +27,50 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
+    const [freeTrials, setFreeTrials] = useState(0);
+
+    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+    // Fetch free trials from backend
+    const fetchTrials = async () => {
+        if (!token) return;
+
+        try {
+            const response = await fetch(`${apiUrl}/api/user/trials`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const data = await response.json();
+            if (data.success) {
+                setFreeTrials(data.freeTrials);
+            }
+        } catch (error) {
+            console.error('Error fetching trials:', error);
+        }
+    };
+
+    // Use one free trial
+    const useTrial = async (): Promise<boolean> => {
+        if (!token) return false;
+
+        try {
+            const response = await fetch(`${apiUrl}/api/user/trials/use`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+            const data = await response.json();
+            if (data.success) {
+                setFreeTrials(data.remaining);
+                return true;
+            }
+            return false;
+        } catch (error) {
+            console.error('Error using trial:', error);
+            return false;
+        }
+    };
 
     // Load saved session on mount
     useEffect(() => {
@@ -37,9 +84,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsLoading(false);
     }, []);
 
+    // Fetch trials when token changes
+    useEffect(() => {
+        if (token) {
+            fetchTrials();
+        }
+    }, [token]);
+
     const login = async (credential: string): Promise<boolean> => {
         try {
-            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
             const response = await fetch(`${apiUrl}/api/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -65,6 +118,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const logout = () => {
         setUser(null);
         setToken(null);
+        setFreeTrials(0);
         localStorage.removeItem('user_token');
         localStorage.removeItem('user_data');
     };
@@ -77,6 +131,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             login,
             logout,
             isLoggedIn: !!user,
+            freeTrials,
+            fetchTrials,
+            useTrial,
         }}>
             {children}
         </AuthContext.Provider>
@@ -90,3 +147,4 @@ export function useAuth() {
     }
     return context;
 }
+

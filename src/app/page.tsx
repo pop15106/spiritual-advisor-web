@@ -9,6 +9,7 @@ import ZiweiSection from "@/components/ZiweiSection";
 import IntegrationSection from "@/components/IntegrationSection";
 import ApiKeyModal from "@/components/ApiKeyModal";
 import UserMenu from "@/components/UserMenu";
+import { useAuth } from "@/contexts/AuthContext";
 
 const services = [
   { id: "tarot", name: "塔羅占卜", icon: "🃏", desc: "透過78張偉特塔羅牌，解讀您的過去、現在與未來" },
@@ -26,7 +27,15 @@ export default function Home() {
   const [isAdmin, setIsAdmin] = useState(false);
   const [hasApiKey, setHasApiKey] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
-  const [freeTrialsLeft, setFreeTrialsLeft] = useState(0);
+  const [localFreeTrials, setLocalFreeTrials] = useState(0);
+
+  // 從 AuthContext 取得登入用戶的試用次數
+  const { isLoggedIn, freeTrials: authFreeTrials, useTrial } = useAuth();
+
+  // 計算實際可用的免費次數（登入用戶用資料庫，訪客用 localStorage）
+  const freeTrialsLeft = isLoggedIn ? authFreeTrials : localFreeTrials;
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
   // 檢查是否為管理員或已有 API Key
   useEffect(() => {
@@ -39,7 +48,7 @@ export default function Home() {
     // 檢查是否為管理員
     const adminToken = localStorage.getItem("admin_token");
     if (adminToken) {
-      fetch("http://localhost:5000/api/check-admin", {
+      fetch(`${apiUrl}/api/check-admin`, {
         headers: { "Authorization": `Bearer ${adminToken}` }
       })
         .then(res => res.json())
@@ -51,16 +60,16 @@ export default function Home() {
         .catch(() => { });
     }
 
-    // 檢查免費試用次數
+    // 檢查訪客免費試用次數（localStorage）
     const trials = localStorage.getItem("free_trials");
     if (trials === null) {
       // 新用戶，給予 10 次免費試用
       localStorage.setItem("free_trials", "10");
-      setFreeTrialsLeft(10);
+      setLocalFreeTrials(10);
     } else {
-      setFreeTrialsLeft(parseInt(trials, 10));
+      setLocalFreeTrials(parseInt(trials, 10));
     }
-  }, []);
+  }, [apiUrl]);
 
   // Browser history support for mouse side buttons (back/forward)
   useEffect(() => {
@@ -81,7 +90,7 @@ export default function Home() {
   }, []);
 
   // Update URL and history when section changes
-  const navigateToSection = (sectionId: string | null) => {
+  const navigateToSection = async (sectionId: string | null) => {
     if (sectionId) {
       // 檢查權限：管理員 > 有 API Key > 有免費試用次數
       const canAccess = isAdmin || hasApiKey || freeTrialsLeft > 0;
@@ -94,9 +103,15 @@ export default function Home() {
 
       // 如果使用免費試用，消耗一次
       if (!isAdmin && !hasApiKey && freeTrialsLeft > 0) {
-        const newCount = freeTrialsLeft - 1;
-        setFreeTrialsLeft(newCount);
-        localStorage.setItem("free_trials", String(newCount));
+        if (isLoggedIn) {
+          // 登入用戶：從資料庫扣
+          await useTrial();
+        } else {
+          // 訪客：從 localStorage 扣
+          const newCount = localFreeTrials - 1;
+          setLocalFreeTrials(newCount);
+          localStorage.setItem("free_trials", String(newCount));
+        }
       }
 
       window.history.pushState({ section: sectionId }, '', `#${sectionId}`);
