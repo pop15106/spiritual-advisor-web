@@ -156,8 +156,8 @@ export default function Home() {
     }
   };
 
-  // 計算顯示的試用狀態
-  const showTrialBadge = !isAdmin && !hasApiKey && freeTrialsLeft > 0;
+  // 計算顯示的試用狀態（只對已登入用戶顯示）
+  const showTrialBadge = isLoggedIn && !isAdmin && !hasApiKey && authFreeTrials > 0;
 
   if (activeSection) {
     // Get pattern class based on active section
@@ -218,10 +218,10 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* 免費試用提示 */}
+            {/* 免費試用提示（已登入用戶） */}
             {showTrialBadge && (
               <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gold bg-gold/10 px-3 py-1.5 rounded-full">
-                🎁 免費試用 {freeTrialsLeft} 次
+                🎁 免費試用 {authFreeTrials} 次
               </span>
             )}
             <a href="#services" className="hidden sm:inline-flex bg-zinc-900 text-white text-xs font-medium px-5 py-2.5 rounded-full hover:bg-zinc-800 transition-all duration-300 tracking-wide hover:shadow-lg">
