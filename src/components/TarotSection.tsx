@@ -23,6 +23,16 @@ export default function TarotSection() {
     const [positions, setPositions] = useState<string[]>([]);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    const [showGuide, setShowGuide] = useState(false);
+    const [guideStep, setGuideStep] = useState(0);
+    const [guideAnswers, setGuideAnswers] = useState<string[]>([]);
+
+    // 引導問題
+    const guideQuestions = [
+        { question: "您想詢問哪個領域？", options: ["感情", "事業", "財運", "健康", "人際關係", "其他"] },
+        { question: "這是關於什麼時間範圍的事？", options: ["過去的困惑", "目前的狀況", "未來的發展", "整體趨勢"] },
+        { question: "您最想知道什麼？", options: ["該怎麼做", "會如何發展", "對方的想法", "自己的盲點", "建議與指引"] }
+    ];
 
     const drawCards = async () => {
         setLoading(true);
@@ -69,37 +79,100 @@ export default function TarotSection() {
             <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-8 border border-purple-100 mb-8">
                 <label className="block text-sm font-medium text-purple-900 mb-3">❓ 請在心中默想您的問題</label>
 
-                {/* Quick Question Selection */}
-                <div className="mb-4">
-                    <p className="text-xs text-purple-600 mb-2">💡 常見問題（點擊快速選擇）</p>
-                    <div className="flex flex-wrap gap-2">
-                        {[
-                            "我的感情運勢如何？",
-                            "最近適合換工作嗎？",
-                            "財運方面有什麼建議？",
-                            "我該如何做出這個決定？",
-                            "目前的困境會如何發展？"
-                        ].map((q, idx) => (
-                            <button
-                                key={idx}
-                                type="button"
-                                onClick={() => setQuestion(q)}
-                                className={`px-3 py-1.5 text-xs rounded-full border transition-all ${question === q
-                                        ? "bg-purple-600 text-white border-purple-600"
-                                        : "bg-white text-purple-700 border-purple-200 hover:border-purple-400 hover:bg-purple-50"
-                                    }`}
-                            >
-                                {q}
-                            </button>
-                        ))}
+                {/* 引導提問開關 */}
+                {!showGuide ? (
+                    <div className="mb-4">
+                        <button
+                            type="button"
+                            onClick={() => {
+                                setShowGuide(true);
+                                setGuideStep(0);
+                                setGuideAnswers([]);
+                            }}
+                            className="flex items-center gap-2 text-sm text-purple-600 hover:text-purple-800 transition-colors"
+                        >
+                            <span className="text-lg">💡</span>
+                            <span className="underline underline-offset-2">不知道怎麼問？讓我引導您</span>
+                        </button>
                     </div>
-                </div>
+                ) : (
+                    /* 引導流程 */
+                    <div className="mb-6 p-4 bg-white rounded-xl border border-purple-200">
+                        <div className="flex justify-between items-center mb-4">
+                            <h4 className="text-sm font-medium text-purple-900">
+                                🧭 引導提問（步驟 {guideStep + 1}/{guideQuestions.length}）
+                            </h4>
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setShowGuide(false);
+                                    setGuideStep(0);
+                                    setGuideAnswers([]);
+                                }}
+                                className="text-xs text-zinc-400 hover:text-zinc-600"
+                            >
+                                ✕ 關閉引導
+                            </button>
+                        </div>
+
+                        {/* 進度條 */}
+                        <div className="flex gap-1 mb-4">
+                            {guideQuestions.map((_, idx) => (
+                                <div
+                                    key={idx}
+                                    className={`h-1 flex-1 rounded-full transition-all ${idx <= guideStep ? 'bg-purple-500' : 'bg-purple-200'
+                                        }`}
+                                />
+                            ))}
+                        </div>
+
+                        <p className="text-sm text-zinc-700 mb-3">{guideQuestions[guideStep].question}</p>
+                        <div className="flex flex-wrap gap-2">
+                            {guideQuestions[guideStep].options.map((option, idx) => (
+                                <button
+                                    key={idx}
+                                    type="button"
+                                    onClick={() => {
+                                        const newAnswers = [...guideAnswers];
+                                        newAnswers[guideStep] = option;
+                                        setGuideAnswers(newAnswers);
+
+                                        if (guideStep < guideQuestions.length - 1) {
+                                            setGuideStep(guideStep + 1);
+                                        } else {
+                                            // 完成引導，組合問題
+                                            const composedQuestion = `關於${newAnswers[0]}方面，${newAnswers[1]}，我想知道${option}`;
+                                            setQuestion(composedQuestion);
+                                            setShowGuide(false);
+                                        }
+                                    }}
+                                    className={`px-4 py-2 text-sm rounded-lg border transition-all ${guideAnswers[guideStep] === option
+                                            ? 'bg-purple-600 text-white border-purple-600'
+                                            : 'bg-purple-50 text-purple-700 border-purple-200 hover:border-purple-400 hover:bg-purple-100'
+                                        }`}
+                                >
+                                    {option}
+                                </button>
+                            ))}
+                        </div>
+
+                        {guideStep > 0 && (
+                            <button
+                                type="button"
+                                onClick={() => setGuideStep(guideStep - 1)}
+                                className="mt-3 text-xs text-purple-500 hover:text-purple-700"
+                            >
+                                ← 上一步
+                            </button>
+                        )}
+                    </div>
+                )}
 
                 <input
                     type="text"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
-                    placeholder="或輸入您自己的問題..."
+                    placeholder="輸入您的問題，或點擊上方引導按鈕..."
                     className="w-full bg-white border border-purple-200 rounded-xl px-4 py-3.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
                 />
 
