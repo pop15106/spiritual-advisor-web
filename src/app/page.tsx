@@ -7,6 +7,8 @@ import HumanDesignSection from "@/components/HumanDesignSection";
 import AstrologySection from "@/components/AstrologySection";
 import ZiweiSection from "@/components/ZiweiSection";
 import IntegrationSection from "@/components/IntegrationSection";
+import ApiKeyModal from "@/components/ApiKeyModal";
+import UserMenu from "@/components/UserMenu";
 
 const services = [
   { id: "tarot", name: "塔羅占卜", icon: "🃏", desc: "透過78張偉特塔羅牌，解讀您的過去、現在與未來" },
@@ -19,6 +21,46 @@ const services = [
 
 export default function Home() {
   const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [pendingSection, setPendingSection] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState(false);
+  const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [freeTrialsLeft, setFreeTrialsLeft] = useState(0);
+
+  // 檢查是否為管理員或已有 API Key
+  useEffect(() => {
+    // 檢查 localStorage 中是否有 API Key
+    const savedKey = localStorage.getItem("user_api_key");
+    if (savedKey) {
+      setHasApiKey(true);
+    }
+
+    // 檢查是否為管理員
+    const adminToken = localStorage.getItem("admin_token");
+    if (adminToken) {
+      fetch("http://localhost:5000/api/check-admin", {
+        headers: { "Authorization": `Bearer ${adminToken}` }
+      })
+        .then(res => res.json())
+        .then(data => {
+          if (data.isAdmin) {
+            setIsAdmin(true);
+          }
+        })
+        .catch(() => { });
+    }
+
+    // 檢查免費試用次數
+    const trials = localStorage.getItem("free_trials");
+    if (trials === null) {
+      // 新用戶，給予 3 次免費試用
+      localStorage.setItem("free_trials", "3");
+      setFreeTrialsLeft(3);
+    } else {
+      setFreeTrialsLeft(parseInt(trials, 10));
+    }
+  }, []);
 
   // Browser history support for mouse side buttons (back/forward)
   useEffect(() => {
@@ -41,12 +83,43 @@ export default function Home() {
   // Update URL and history when section changes
   const navigateToSection = (sectionId: string | null) => {
     if (sectionId) {
+      // 檢查權限：管理員 > 有 API Key > 有免費試用次數
+      const canAccess = isAdmin || hasApiKey || freeTrialsLeft > 0;
+
+      if (!canAccess) {
+        setPendingSection(sectionId);
+        setShowApiKeyModal(true);
+        return;
+      }
+
+      // 如果使用免費試用，消耗一次
+      if (!isAdmin && !hasApiKey && freeTrialsLeft > 0) {
+        const newCount = freeTrialsLeft - 1;
+        setFreeTrialsLeft(newCount);
+        localStorage.setItem("free_trials", String(newCount));
+      }
+
       window.history.pushState({ section: sectionId }, '', `#${sectionId}`);
     } else {
       window.history.pushState({ section: null }, '', window.location.pathname);
     }
     setActiveSection(sectionId);
   };
+
+  // API Key 提交成功後
+  const handleApiKeySubmit = (apiKey: string) => {
+    setHasApiKey(true);
+    setShowApiKeyModal(false);
+    // 繼續導航到原本要去的頁面
+    if (pendingSection) {
+      window.history.pushState({ section: pendingSection }, '', `#${pendingSection}`);
+      setActiveSection(pendingSection);
+      setPendingSection(null);
+    }
+  };
+
+  // 計算顯示的試用狀態
+  const showTrialBadge = !isAdmin && !hasApiKey && freeTrialsLeft > 0;
 
   if (activeSection) {
     // Get pattern class based on active section
@@ -95,8 +168,8 @@ export default function Home() {
     <div className="min-h-screen bg-white">
       {/* Navigation */}
       <nav className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-zinc-100/50">
-        <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
-          <span className="text-xl tracking-tighter font-semibold text-zinc-900 uppercase">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 sm:h-20 flex items-center justify-between">
+          <span className="text-lg sm:text-xl tracking-tighter font-semibold text-zinc-900 uppercase">
             AI 身心靈<span className="text-gold">.</span>
           </span>
 
@@ -106,10 +179,71 @@ export default function Home() {
             <a href="#contact" className="hover:text-zinc-900 transition-colors duration-300">聯繫我們</a>
           </div>
 
-          <a href="#services" className="hidden sm:inline-flex bg-zinc-900 text-white text-xs font-medium px-5 py-2.5 rounded-full hover:bg-zinc-800 transition-all duration-300 tracking-wide hover:shadow-lg">
-            開始占卜
-          </a>
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* 免費試用提示 */}
+            {showTrialBadge && (
+              <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gold bg-gold/10 px-3 py-1.5 rounded-full">
+                🎁 免費試用 {freeTrialsLeft} 次
+              </span>
+            )}
+            <a href="#services" className="hidden sm:inline-flex bg-zinc-900 text-white text-xs font-medium px-5 py-2.5 rounded-full hover:bg-zinc-800 transition-all duration-300 tracking-wide hover:shadow-lg">
+              開始占卜
+            </a>
+            <UserMenu />
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setShowMobileMenu(!showMobileMenu)}
+              className="md:hidden p-2 text-zinc-600 hover:text-zinc-900"
+              aria-label="選單"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                {showMobileMenu ? (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                ) : (
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+                )}
+              </svg>
+            </button>
+          </div>
         </div>
+
+        {/* Mobile Menu Drawer */}
+        {showMobileMenu && (
+          <div className="md:hidden bg-white border-t border-zinc-100">
+            <div className="px-4 py-4 space-y-3">
+              <a
+                href="#services"
+                onClick={() => setShowMobileMenu(false)}
+                className="block py-2 text-sm font-medium text-zinc-700 hover:text-gold transition-colors"
+              >
+                🎯 服務項目
+              </a>
+              <a
+                href="#about"
+                onClick={() => setShowMobileMenu(false)}
+                className="block py-2 text-sm font-medium text-zinc-700 hover:text-gold transition-colors"
+              >
+                ℹ️ 關於我們
+              </a>
+              <a
+                href="#contact"
+                onClick={() => setShowMobileMenu(false)}
+                className="block py-2 text-sm font-medium text-zinc-700 hover:text-gold transition-colors"
+              >
+                📧 聯繫我們
+              </a>
+              <div className="pt-2 border-t border-zinc-100">
+                <a
+                  href="#services"
+                  onClick={() => setShowMobileMenu(false)}
+                  className="block w-full text-center py-3 bg-zinc-900 text-white text-sm font-medium rounded-xl hover:bg-zinc-800 transition-colors"
+                >
+                  開始占卜
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </nav>
 
       {/* Hero Section */}
@@ -296,6 +430,16 @@ export default function Home() {
           </div>
         </div>
       </footer>
+
+      {/* API Key Modal */}
+      <ApiKeyModal
+        isOpen={showApiKeyModal}
+        onClose={() => {
+          setShowApiKeyModal(false);
+          setPendingSection(null);
+        }}
+        onSubmit={handleApiKeySubmit}
+      />
     </div>
   );
 }
