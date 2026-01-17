@@ -9,6 +9,13 @@ interface User {
     avatar: string;
 }
 
+interface TrialDetails {
+    total: number;
+    initial: number;
+    daily: number;
+    next_reset?: string;
+}
+
 interface AuthContextType {
     user: User | null;
     token: string | null;
@@ -17,6 +24,7 @@ interface AuthContextType {
     logout: () => void;
     isLoggedIn: boolean;
     freeTrials: number;
+    trialDetails: TrialDetails | null;
     fetchTrials: () => Promise<void>;
     useTrial: () => Promise<boolean>;
 }
@@ -28,6 +36,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(true);
     const [freeTrials, setFreeTrials] = useState(0);
+    const [trialDetails, setTrialDetails] = useState<TrialDetails | null>(null);
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
 
@@ -42,6 +51,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = await response.json();
             if (data.success) {
                 setFreeTrials(data.freeTrials);
+                if (data.details) {
+                    setTrialDetails(data.details);
+                }
             }
         } catch (error) {
             console.error('Error fetching trials:', error);
@@ -63,6 +75,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             const data = await response.json();
             if (data.success) {
                 setFreeTrials(data.remaining);
+                // Refresh details to get accurate counts
+                fetchTrials();
                 return true;
             }
             return false;
@@ -119,6 +133,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setUser(null);
         setToken(null);
         setFreeTrials(0);
+        setTrialDetails(null);
         localStorage.removeItem('user_token');
         localStorage.removeItem('user_data');
     };
@@ -132,6 +147,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             logout,
             isLoggedIn: !!user,
             freeTrials,
+            trialDetails,
             fetchTrials,
             useTrial,
         }}>
