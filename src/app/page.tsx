@@ -54,9 +54,9 @@ export default function Home() {
     // 檢查免費試用次數
     const trials = localStorage.getItem("free_trials");
     if (trials === null) {
-      // 新用戶，給予 3 次免費試用
-      localStorage.setItem("free_trials", "3");
-      setFreeTrialsLeft(3);
+      // 新用戶，給予 10 次免費試用
+      localStorage.setItem("free_trials", "10");
+      setFreeTrialsLeft(10);
     } else {
       setFreeTrialsLeft(parseInt(trials, 10));
     }
