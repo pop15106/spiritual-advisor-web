@@ -39,7 +39,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     const login = async (credential: string): Promise<boolean> => {
         try {
-            const response = await fetch('http://localhost:5000/api/auth/google', {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${apiUrl}/api/auth/google`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ credential }),

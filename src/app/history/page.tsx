@@ -46,9 +46,10 @@ export default function HistoryPage() {
     const fetchReadings = async () => {
         setIsLoading(true);
         try {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
             const url = filter
-                ? `http://localhost:5000/api/readings?type=${filter}`
-                : 'http://localhost:5000/api/readings';
+                ? `${apiUrl}/api/readings?type=${filter}`
+                : `${apiUrl}/api/readings`;
 
             const response = await fetch(url, {
                 headers: { 'Authorization': `Bearer ${token}` }
@@ -71,7 +72,8 @@ export default function HistoryPage() {
         if (!confirm('確定要刪除這筆紀錄嗎？')) return;
 
         try {
-            const response = await fetch(`http://localhost:5000/api/readings/${id}`, {
+            const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+            const response = await fetch(`${apiUrl}/api/readings/${id}`, {
                 method: 'DELETE',
                 headers: { 'Authorization': `Bearer ${token}` }
             });
