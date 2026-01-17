@@ -10,6 +10,7 @@ import IntegrationSection from "@/components/IntegrationSection";
 import ApiKeyModal from "@/components/ApiKeyModal";
 import UserMenu from "@/components/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
+import { GoogleLogin, CredentialResponse } from "@react-oauth/google";
 
 const services = [
   { id: "tarot", name: "塔羅占卜", icon: "🃏", desc: "透過78張偉特塔羅牌，解讀您的過去、現在與未來" },
@@ -28,14 +29,24 @@ export default function Home() {
   const [hasApiKey, setHasApiKey] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
   const [localFreeTrials, setLocalFreeTrials] = useState(0);
+  const [showWelcome, setShowWelcome] = useState(false);
 
   // 從 AuthContext 取得登入用戶的試用次數
-  const { isLoggedIn, freeTrials: authFreeTrials, useTrial } = useAuth();
+  const { isLoggedIn, freeTrials: authFreeTrials, useTrial, login } = useAuth();
 
   // 計算實際可用的免費次數（登入用戶用資料庫，訪客用 localStorage）
   const freeTrialsLeft = isLoggedIn ? authFreeTrials : localFreeTrials;
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000';
+
+  // 首次訪問顯示歡迎彈窗
+  useEffect(() => {
+    const hasVisited = localStorage.getItem("has_visited");
+    if (!hasVisited && !isLoggedIn) {
+      setShowWelcome(true);
+      localStorage.setItem("has_visited", "true");
+    }
+  }, [isLoggedIn]);
 
   // 檢查是否為管理員或已有 API Key
   useEffect(() => {
@@ -89,30 +100,42 @@ export default function Home() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // 登入要求彈窗狀態
+  const [showLoginRequired, setShowLoginRequired] = useState(false);
+
   // Update URL and history when section changes
   const navigateToSection = async (sectionId: string | null) => {
     if (sectionId) {
-      // 檢查權限：管理員 > 有 API Key > 有免費試用次數
-      const canAccess = isAdmin || hasApiKey || freeTrialsLeft > 0;
+      // 管理員直接通過
+      if (isAdmin) {
+        window.history.pushState({ section: sectionId }, '', `#${sectionId}`);
+        setActiveSection(sectionId);
+        return;
+      }
 
-      if (!canAccess) {
+      // 有自己的 API Key 直接通過
+      if (hasApiKey) {
+        window.history.pushState({ section: sectionId }, '', `#${sectionId}`);
+        setActiveSection(sectionId);
+        return;
+      }
+
+      // 未登入用戶：要求先登入
+      if (!isLoggedIn) {
+        setPendingSection(sectionId);
+        setShowLoginRequired(true);
+        return;
+      }
+
+      // 已登入用戶：檢查免費次數
+      if (freeTrialsLeft <= 0) {
         setPendingSection(sectionId);
         setShowApiKeyModal(true);
         return;
       }
 
-      // 如果使用免費試用，消耗一次
-      if (!isAdmin && !hasApiKey && freeTrialsLeft > 0) {
-        if (isLoggedIn) {
-          // 登入用戶：從資料庫扣
-          await useTrial();
-        } else {
-          // 訪客：從 localStorage 扣
-          const newCount = localFreeTrials - 1;
-          setLocalFreeTrials(newCount);
-          localStorage.setItem("free_trials", String(newCount));
-        }
-      }
+      // 消耗一次免費試用
+      await useTrial();
 
       window.history.pushState({ section: sectionId }, '', `#${sectionId}`);
     } else {
@@ -455,6 +478,135 @@ export default function Home() {
         }}
         onSubmit={handleApiKeySubmit}
       />
+
+      {/* Login Required Modal */}
+      {showLoginRequired && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => {
+              setShowLoginRequired(false);
+              setPendingSection(null);
+            }}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
+            <div className="bg-gradient-to-r from-purple-600 to-violet-600 px-6 py-5">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
+                  <span className="text-xl">🔐</span>
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-white">請先登入</h2>
+                  <p className="text-purple-200 text-xs">登入即可獲得 10 次免費體驗</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="p-6">
+              <div className="flex flex-col items-center gap-4">
+                <div className="text-center mb-2">
+                  <p className="text-sm text-zinc-600">
+                    使用 Google 帳號登入，立即獲得
+                  </p>
+                  <p className="text-2xl font-bold text-purple-600 my-2">
+                    🎁 10 次免費占卜
+                  </p>
+                  <p className="text-xs text-zinc-400">
+                    登入後次數會永久綁定，不會因為換瀏覽器而消失
+                  </p>
+                </div>
+
+                <GoogleLogin
+                  onSuccess={async (credentialResponse: CredentialResponse) => {
+                    if (credentialResponse.credential) {
+                      const success = await login(credentialResponse.credential);
+                      if (success) {
+                        setShowLoginRequired(false);
+                        // 登入成功後繼續導航
+                        if (pendingSection) {
+                          window.history.pushState({ section: pendingSection }, '', `#${pendingSection}`);
+                          setActiveSection(pendingSection);
+                          setPendingSection(null);
+                        }
+                      }
+                    }
+                  }}
+                  onError={() => {
+                    console.error('Login Failed');
+                  }}
+                  theme="filled_blue"
+                  size="large"
+                  width="300"
+                />
+
+                <button
+                  onClick={() => {
+                    setShowLoginRequired(false);
+                    setPendingSection(null);
+                  }}
+                  className="text-sm text-zinc-400 hover:text-zinc-600 mt-2"
+                >
+                  取消
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Welcome Popup - 首次訪問提示 */}
+      {showWelcome && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center">
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => setShowWelcome(false)}
+          />
+          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+            <div className="bg-gradient-to-r from-gold via-yellow-500 to-gold px-6 py-8 text-center">
+              <div className="text-5xl mb-3">✨</div>
+              <h2 className="text-2xl font-bold text-white">歡迎來到 AI 身心靈顧問</h2>
+              <p className="text-yellow-100 text-sm mt-2">東西方智慧融合的命理平台</p>
+            </div>
+
+            <div className="p-6">
+              <div className="text-center mb-6">
+                <p className="text-lg text-zinc-700 mb-3">
+                  🎁 註冊即可獲得 <span className="font-bold text-purple-600">10 次免費占卜</span>
+                </p>
+                <p className="text-sm text-zinc-500">
+                  包含塔羅牌、八字、紫微斗數、西洋占星等多種命理服務
+                </p>
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <GoogleLogin
+                  onSuccess={async (credentialResponse: CredentialResponse) => {
+                    if (credentialResponse.credential) {
+                      await login(credentialResponse.credential);
+                      setShowWelcome(false);
+                    }
+                  }}
+                  onError={() => console.error('Login Failed')}
+                  theme="filled_blue"
+                  size="large"
+                  width="350"
+                />
+
+                <button
+                  onClick={() => setShowWelcome(false)}
+                  className="text-sm text-zinc-400 hover:text-zinc-600 py-2"
+                >
+                  稍後再說，先逛逛
+                </button>
+              </div>
+
+              <p className="text-xs text-zinc-400 text-center mt-4">
+                登入後免費次數會永久綁定帳號，不會因為換瀏覽器而消失
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
