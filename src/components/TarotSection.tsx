@@ -68,11 +68,38 @@ export default function TarotSection() {
             {/* Question Input */}
             <div className="bg-gradient-to-br from-purple-50 to-violet-50 rounded-2xl p-8 border border-purple-100 mb-8">
                 <label className="block text-sm font-medium text-purple-900 mb-3">❓ 請在心中默想您的問題</label>
+
+                {/* Quick Question Selection */}
+                <div className="mb-4">
+                    <p className="text-xs text-purple-600 mb-2">💡 常見問題（點擊快速選擇）</p>
+                    <div className="flex flex-wrap gap-2">
+                        {[
+                            "我的感情運勢如何？",
+                            "最近適合換工作嗎？",
+                            "財運方面有什麼建議？",
+                            "我該如何做出這個決定？",
+                            "目前的困境會如何發展？"
+                        ].map((q, idx) => (
+                            <button
+                                key={idx}
+                                type="button"
+                                onClick={() => setQuestion(q)}
+                                className={`px-3 py-1.5 text-xs rounded-full border transition-all ${question === q
+                                        ? "bg-purple-600 text-white border-purple-600"
+                                        : "bg-white text-purple-700 border-purple-200 hover:border-purple-400 hover:bg-purple-50"
+                                    }`}
+                            >
+                                {q}
+                            </button>
+                        ))}
+                    </div>
+                </div>
+
                 <input
                     type="text"
                     value={question}
                     onChange={(e) => setQuestion(e.target.value)}
-                    placeholder="例如：我的感情運勢如何？最近適合換工作嗎？"
+                    placeholder="或輸入您自己的問題..."
                     className="w-full bg-white border border-purple-200 rounded-xl px-4 py-3.5 text-zinc-900 placeholder-zinc-400 focus:outline-none focus:border-purple-500 focus:ring-2 focus:ring-purple-100 transition-all"
                 />
 
@@ -147,8 +174,8 @@ export default function TarotSection() {
                                         <span
                                             key={kidx}
                                             className={`px-2 py-1 rounded-full text-xs font-medium ${card.reversed
-                                                    ? "bg-red-50 text-red-600 border border-red-200"
-                                                    : "bg-emerald-50 text-emerald-600 border border-emerald-200"
+                                                ? "bg-red-50 text-red-600 border border-red-200"
+                                                : "bg-emerald-50 text-emerald-600 border border-emerald-200"
                                                 }`}
                                         >
                                             {keyword}
