@@ -183,13 +183,6 @@ export default function UserMenu() {
                                 <span>📜</span>
                                 占卜歷史
                             </a>
-                            <a
-                                href="/settings"
-                                className="flex items-center gap-3 px-3 py-2 text-sm text-zinc-700 hover:bg-zinc-50 rounded-lg transition-colors"
-                            >
-                                <span>⚙️</span>
-                                設定
-                            </a>
                         </div>
 
                         <div className="p-2 border-t border-zinc-100">
