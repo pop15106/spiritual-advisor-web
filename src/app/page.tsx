@@ -119,14 +119,7 @@ export default function Home() {
         return;
       }
 
-      // 未登入用戶：要求先登入
-      if (!isLoggedIn) {
-        setPendingSection(sectionId);
-        setShowLoginRequired(true);
-        return;
-      }
-
-      // 已登入用戶：檢查免費次數
+      // 已登入用戶或訪客：檢查免費次數
       if (freeTrialsLeft <= 0) {
         setPendingSection(sectionId);
         setShowApiKeyModal(true);
@@ -134,7 +127,13 @@ export default function Home() {
       }
 
       // 消耗一次免費試用
-      await useTrial();
+      if (isLoggedIn) {
+        await useTrial();
+      } else {
+        const newTrials = localFreeTrials - 1;
+        setLocalFreeTrials(newTrials);
+        localStorage.setItem("free_trials", newTrials.toString());
+      }
 
       window.history.pushState({ section: sectionId }, '', `#${sectionId}`);
     } else {
@@ -155,8 +154,8 @@ export default function Home() {
     }
   };
 
-  // 計算顯示的試用狀態（只對已登入用戶顯示）
-  const showTrialBadge = isLoggedIn && !isAdmin && !hasApiKey && authFreeTrials > 0;
+  // 計算顯示的試用狀態
+  const showTrialBadge = !isAdmin && !hasApiKey && freeTrialsLeft > 0;
 
   if (activeSection) {
     // Get pattern class based on active section
@@ -217,10 +216,10 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* 免費試用提示（已登入用戶） */}
+            {/* 免費試用提示 */}
             {showTrialBadge && (
               <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gold bg-gold/10 px-3 py-1.5 rounded-full">
-                🎁 免費試用 {authFreeTrials} 次
+                🎁 免費試用 {freeTrialsLeft} 次
               </span>
             )}
             <a href="#services" className="hidden sm:inline-flex bg-zinc-900 text-white text-xs font-medium px-5 py-2.5 rounded-full hover:bg-zinc-800 transition-all duration-300 tracking-wide hover:shadow-lg">
@@ -478,71 +477,6 @@ export default function Home() {
         onSubmit={handleApiKeySubmit}
       />
 
-      {/* Login Required Modal */}
-      {showLoginRequired && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => {
-              setShowLoginRequired(false);
-              setPendingSection(null);
-            }}
-          />
-          <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden">
-            <div className="bg-gradient-to-r from-purple-600 to-violet-600 px-6 py-5">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center">
-                  <span className="text-xl">🔐</span>
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-white">請先登入</h2>
-                  <p className="text-purple-200 text-xs">登入即可獲得 10 次免費體驗</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="p-6">
-              <div className="flex flex-col items-center gap-4">
-                <div className="text-center mb-2">
-                  <p className="text-sm text-zinc-600">
-                    使用 Google 帳號登入，立即獲得
-                  </p>
-                  <p className="text-2xl font-bold text-purple-600 my-2">
-                    🎁 10 次免費占卜
-                  </p>
-                  <p className="text-xs text-zinc-400">
-                    登入後次數會永久綁定，不會因為換瀏覽器而消失
-                  </p>
-                </div>
-
-                <button
-                  onClick={() => {
-                    // 暫時僅使用 localStorage 試用
-                    localStorage.setItem("free_trials", "10");
-                    setLocalFreeTrials(10);
-                    setShowLoginRequired(false);
-                    setPendingSection(null);
-                  }}
-                  className="w-full bg-white text-zinc-900 font-medium py-3 rounded-lg hover:bg-zinc-100 transition-colors border border-zinc-200"
-                >
-                  🚀 繼續體驗 (訪客模式)
-                </button>
-
-                <button
-                  onClick={() => {
-                    setShowLoginRequired(false);
-                    setPendingSection(null);
-                  }}
-                  className="text-sm text-zinc-400 hover:text-zinc-600 mt-2"
-                >
-                  取消
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       {/* Welcome Popup - 首次訪問提示 */}
       {showWelcome && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center">
@@ -575,7 +509,7 @@ export default function Home() {
                     setLocalFreeTrials(10);
                     setShowWelcome(false);
                   }}
-                  className="w-full bg-white text-zinc-900 font-medium py-3 rounded-lg hover:bg-zinc-100 transition-colors"
+                  className="w-full bg-white text-zinc-900 font-medium py-3 rounded-lg hover:bg-zinc-100 transition-colors border border-zinc-200"
                 >
                   🚀 立即開始體驗 (訪客模式)
                 </button>
