@@ -579,18 +579,28 @@ export default function Home() {
               </div>
 
               <div className="flex flex-col gap-3">
-                <GoogleLogin
-                  onSuccess={async (credentialResponse: CredentialResponse) => {
-                    if (credentialResponse.credential) {
-                      await login(credentialResponse.credential);
-                      setShowWelcome(false);
-                    }
-                  }}
-                  onError={() => console.error('Login Failed')}
-                  theme="filled_blue"
-                  size="large"
-                  width="350"
-                />
+                {process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ? (
+                  <GoogleLogin
+                    onSuccess={async (credentialResponse: CredentialResponse) => {
+                      if (credentialResponse.credential) {
+                        try {
+                          await login(credentialResponse.credential);
+                          setShowWelcome(false);
+                        } catch (e) {
+                          console.error("Login Error:", e);
+                        }
+                      }
+                    }}
+                    onError={() => console.error('Login Failed')}
+                    theme="filled_blue"
+                    size="large"
+                    width="350"
+                  />
+                ) : (
+                  <div className="p-4 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
+                    ⚠️ 未設定 Google Client ID (請檢查 Vercel 環境變數)
+                  </div>
+                )}
 
                 <button
                   onClick={() => setShowWelcome(false)}
