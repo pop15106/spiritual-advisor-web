@@ -216,12 +216,13 @@ export default function Home() {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-4">
-            {/* 免費試用提示 */}
+            {/* 免費試用提示 - 暫時隱藏
             {showTrialBadge && (
               <span className="hidden sm:inline-flex items-center gap-1 text-xs text-gold bg-gold/10 px-3 py-1.5 rounded-full">
                 🎁 免費試用 {freeTrialsLeft} 次
               </span>
             )}
+            */}
             <a href="#services" className="hidden sm:inline-flex bg-zinc-900 text-white text-xs font-medium px-5 py-2.5 rounded-full hover:bg-zinc-800 transition-all duration-300 tracking-wide hover:shadow-lg">
               開始占卜
             </a>
@@ -493,34 +494,33 @@ export default function Home() {
 
             <div className="p-6">
               <div className="text-center mb-6">
-                <p className="text-lg text-zinc-700 mb-3">
-                  🎁 註冊即可獲得 <span className="font-bold text-purple-600">10 次免費占卜</span>
+                <p className="text-lg text-zinc-700 mb-3 font-medium">
+                  🎉 現在為上線測試時間
                 </p>
-                <p className="text-sm text-zinc-500">
-                  包含塔羅牌、八字、紫微斗數、西洋占星等多種命理服務
-                </p>
+                <div className="text-sm text-zinc-500 space-y-2">
+                  <p>暫無使用次數限制，歡迎盡情體驗。</p>
+                  <p className="text-amber-600/80 text-xs bg-amber-50 py-2 px-3 rounded-lg">
+                    ⚠️ 請斟酌使用，若達到系統安全上限將需等待重置
+                  </p>
+                </div>
               </div>
 
               <div className="flex flex-col gap-3">
                 <button
                   onClick={() => {
-                    // 暫時僅使用 localStorage 試用
-                    localStorage.setItem("free_trials", "10");
-                    setLocalFreeTrials(10);
+                    // 給予較多測試次數 (50次)
+                    localStorage.setItem("free_trials", "50");
+                    setLocalFreeTrials(50);
                     setShowWelcome(false);
                   }}
-                  className="w-full bg-white text-zinc-900 font-medium py-3 rounded-lg hover:bg-zinc-100 transition-colors border border-zinc-200"
+                  className="w-full bg-gradient-to-r from-zinc-900 to-zinc-800 text-white font-medium py-3 rounded-lg hover:shadow-lg transition-all transform hover:-translate-y-0.5"
                 >
-                  🚀 立即開始體驗 (訪客模式)
+                  🚀 立即開始體驗
                 </button>
-
-                <p className="text-xs text-white/60 text-center">
-                  * 目前 Google 登入維護中，暫以訪客身份體驗
-                </p>
               </div>
 
               <p className="text-xs text-zinc-400 text-center mt-4">
-                登入後免費次數會永久綁定帳號，不會因為換瀏覽器而消失
+                包含塔羅牌、八字、紫微斗數、西洋占星等多種命理服務
               </p>
             </div>
           </div>
