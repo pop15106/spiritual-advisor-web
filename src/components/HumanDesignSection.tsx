@@ -59,15 +59,28 @@ export default function HumanDesignSection() {
     const calculateChart = async () => {
         setLoading(true);
         setError(null);
-        try {
-            const response = await humanDesignApi.calculate(birthDate, birthTime, selectedCity.name, selectedCity.lat, selectedCity.lon);
-            setHdData(response);
-        } catch (err) {
-            setError("無法連接後端 API，請確認後端服務已啟動");
-            console.error("Human Design API error:", err);
-        } finally {
-            setLoading(false);
-        }
+        setHdData(null);
+
+        await humanDesignApi.calculateStream(
+            birthDate,
+            birthTime,
+            selectedCity.name,
+            (data: any) => {
+                setHdData({ ...data, interpretation: '' } as HumanDesignResponse);
+            },
+            (chunk: string) => {
+                setHdData(prev => {
+                    if (!prev) return prev;
+                    return { ...prev, interpretation: (prev.interpretation || '') + chunk };
+                });
+            },
+            () => { setLoading(false); },
+            (err: any) => {
+                setError("無法連接後端 API，請確認後端服務已啟動");
+                console.error("Human Design API error:", err);
+                setLoading(false);
+            }
+        );
     };
 
     // 當選擇閘門時，獲取爻的 AI 解釋
@@ -528,6 +541,15 @@ export default function HumanDesignSection() {
                             🔮 AI 完整解析
                         </h4>
                         <div className="prose prose-sm prose-cyan max-w-none text-slate-700 space-y-2">
+                            {(!hdData.interpretation || hdData.interpretation.length === 0) && (
+                                <div className="flex items-center gap-3 text-cyan-600 animate-pulse py-4">
+                                    <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    <span>人類圖分析師正在詳批中，請稍候...</span>
+                                </div>
+                            )}
                             {hdData.interpretation?.split('\n').map((line, idx) => {
                                 // 標題處理
                                 if (line.startsWith('##')) {
@@ -556,8 +578,8 @@ export default function HumanDesignSection() {
                         </div>
                     </div>
 
-                    <button onClick={() => setHdData(null)} className="w-full bg-slate-100 text-slate-600 font-medium py-2 rounded-lg hover:bg-slate-200 text-sm">
-                        重新計算
+                    <button onClick={() => setHdData(null)} disabled={loading} className={`w-full font-medium py-2 rounded-lg text-sm ${loading ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                        {loading ? '分析中...' : '重新計算'}
                     </button>
                 </>
             )}

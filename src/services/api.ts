@@ -36,12 +36,15 @@ export interface TarotCard {
   reversedMeaning: string;
   meaning: string;
   keywords: string;
+  position?: string;
 }
 
 export interface TarotDrawResponse {
   success: boolean;
   cards: TarotCard[];
   positions: string[];
+  spread?: string;
+  interpretation?: string;
 }
 
 export const tarotApi = {
@@ -53,6 +56,26 @@ export const tarotApi = {
 
   getCards: (): Promise<{ success: boolean; cards: { name: string; id: string }[] }> =>
     fetchApi('/tarot/cards'),
+
+  analyzeStream: async (
+    question: string,
+    spreadType: string | null,
+    onData: (data: TarotDrawResponse) => void,
+    onChunk: (chunk: string) => void,
+    onDone: () => void,
+    onError: (err: any) => void
+  ) => {
+    try {
+      const response = await fetch(`${API_BASE}/tarot/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, spreadType }),
+      });
+      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+    } catch (err) {
+      onError(err);
+    }
+  }
 };
 
 // ========== 八字 API ==========
@@ -63,28 +86,118 @@ export interface BaziLiunian {
   score: number;
 }
 
+export interface BaziPillar {
+  gan: string;
+  zhi: string;
+  ten_god: string;
+  hidden_stems: { gan: string; ten_god: string }[];
+  nayin: string;
+  shen_sha: string[];
+}
+
+export interface BaziDaYun {
+  start_age: number;
+  start_year: number;
+  end_year: number;
+  gan: string;
+  zhi: string;
+  gan_ten_god: string;
+  zhi_ten_god: string;
+  nayin: string;
+}
+
+export interface BaziChart {
+  pillars: {
+    year: BaziPillar;
+    month: BaziPillar;
+    day: BaziPillar;
+    hour: BaziPillar;
+  };
+  day_master: string;
+  lunar_date_str: string;
+  solar_date_str: string;
+  da_yun: BaziDaYun[];
+  liunian: BaziLiunian[];
+  gender: string;
+  start_age: number;
+  summary_short?: string;
+  dm_wuxing?: string;
+  dm_trait?: string;
+}
+
 export interface BaziResponse {
   success: boolean;
-  lunar: string;
-  year_gan: string;
-  year_zhi: string;
-  month_gan: string;
-  month_zhi: string;
-  day_gan: string;
-  day_zhi: string;
-  hour_gan: string;
-  hour_zhi: string;
-  day_master: string;
-  liunian: BaziLiunian[];
+  chart: BaziChart;
   interpretation: string;
 }
 
 export const baziApi = {
-  calculate: (birthDate: string, birthHour: number): Promise<BaziResponse> =>
+  calculate: (birthDate: string, birthHour: number, gender: 'male' | 'female' = 'male'): Promise<BaziResponse> =>
     fetchApi('/bazi/calculate', {
       method: 'POST',
-      body: JSON.stringify({ birthDate, birthHour }),
+      body: JSON.stringify({ birthDate, birthHour, gender }),
     }),
+
+  calculateStream: async (
+    birthDate: string,
+    birthHour: number,
+    gender: 'male' | 'female',
+    onData: (data: BaziResponse) => void,
+    onChunk: (chunk: string) => void,
+    onDone: () => void,
+    onError: (err: any) => void
+  ) => {
+    try {
+      const response = await fetch(`${API_BASE}/bazi/calculate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ birthDate, birthHour, gender, stream: true }),
+      });
+
+      if (!response.ok) throw new Error(response.statusText);
+      if (!response.body) throw new Error('No response body');
+
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+
+        // Process lines
+        const lines = buffer.split('\n\n');
+        buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+        for (const line of lines) {
+          if (line.startsWith('data: ')) {
+            const jsonStr = line.replace('data: ', '');
+            if (jsonStr === '[DONE]') {
+              onDone();
+              return;
+            }
+            try {
+              const event = JSON.parse(jsonStr);
+              if (event.type === 'data') {
+                onData(event.payload);
+              } else if (event.type === 'chunk') {
+                onChunk(event.content);
+              } else if (event.type === 'done') {
+                onDone();
+                return;
+              }
+            } catch (e) {
+              console.error('JSON parse error', e);
+            }
+          }
+        }
+      }
+    } catch (err) {
+      onError(err);
+    }
+  }
 };
 
 // ========== 人類圖 API ==========
@@ -134,6 +247,26 @@ export const humanDesignApi = {
       method: 'POST',
       body: JSON.stringify({ birthDate, birthTime, birthCity, birthLat, birthLon }),
     }),
+  calculateStream: async (
+    birthDate: string,
+    birthTime: string,
+    birthCity: string | undefined,
+    onData: (data: any) => void,
+    onChunk: (chunk: string) => void,
+    onDone: () => void,
+    onError: (err: any) => void
+  ) => {
+    try {
+      const response = await fetch(`${API_BASE}/humandesign/calculate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ birthDate, birthTime, birthCity, stream: true }),
+      });
+      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+    } catch (err) {
+      onError(err);
+    }
+  }
 };
 
 // ========== 占星 API ==========
@@ -159,6 +292,26 @@ export const astrologyApi = {
       method: 'POST',
       body: JSON.stringify({ birthDate, birthTime, birthLat, birthLon, birthCity }),
     }),
+  calculateStream: async (
+    birthDate: string,
+    birthTime: string,
+    birthCity: string | undefined,
+    onData: (data: any) => void,
+    onChunk: (chunk: string) => void,
+    onDone: () => void,
+    onError: (err: any) => void
+  ) => {
+    try {
+      const response = await fetch(`${API_BASE}/astrology/calculate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ birthDate, birthTime, birthCity, stream: true }),
+      });
+      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+    } catch (err) {
+      onError(err);
+    }
+  }
 };
 
 // ========== 紫微斗數 API ==========
@@ -191,6 +344,26 @@ export const ziweiApi = {
       method: 'POST',
       body: JSON.stringify({ birthDate, birthHour }),
     }),
+
+  calculateStream: async (
+    birthDate: string,
+    birthHour: number,
+    onData: (data: any) => void,
+    onChunk: (chunk: string) => void,
+    onDone: () => void,
+    onError: (err: any) => void
+  ) => {
+    try {
+      const response = await fetch(`${API_BASE}/ziwei/calculate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ birthDate, birthHour, stream: true }),
+      });
+      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+    } catch (err) {
+      onError(err);
+    }
+  }
 
 };
 
@@ -233,12 +406,35 @@ export interface IntegrationBirthData {
   city?: { name: string; lat: number; lng: number };
 }
 
+
+
 export const integrationApi = {
   analyze: (question: string, systems?: string[], birthData?: IntegrationBirthData): Promise<IntegrationResponse> =>
     fetchApi('/integration/analyze', {
       method: 'POST',
       body: JSON.stringify({ question, systems, birth_data: birthData }),
     }),
+
+  analyzeStream: async (
+    question: string,
+    systems: string[],
+    birthData: IntegrationBirthData | undefined,
+    onData: (data: any) => void,
+    onChunk: (chunk: string) => void,
+    onDone: () => void,
+    onError: (err: any) => void
+  ) => {
+    try {
+      const response = await fetch(`${API_BASE}/integration/analyze`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, systems, birth_data: birthData }),
+      });
+      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+    } catch (err) {
+      onError(err);
+    }
+  }
 };
 
 // ========== 健康檢查 ==========
@@ -247,3 +443,53 @@ export const healthApi = {
   check: (): Promise<{ status: string; message: string }> =>
     fetchApi('/health'),
 };
+
+// Helper function to handle SSE stream parsing
+async function handleStreamResponse(
+  response: Response,
+  onData: (data: any) => void,
+  onChunk: (chunk: string) => void,
+  onDone: () => void,
+  onError: (err: any) => void
+) {
+  if (!response.ok) throw new Error(response.statusText);
+  if (!response.body) throw new Error('No response body');
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = '';
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+
+    buffer += decoder.decode(value, { stream: true });
+
+    // Process lines
+    const lines = buffer.split('\n\n');
+    buffer = lines.pop() || ''; // Keep incomplete line in buffer
+
+    for (const line of lines) {
+      if (line.startsWith('data: ')) {
+        const jsonStr = line.replace('data: ', '');
+        if (jsonStr === '[DONE]') {
+          onDone();
+          return;
+        }
+        try {
+          const event = JSON.parse(jsonStr);
+          if (event.type === 'data') {
+            onData(event.payload);
+          } else if (event.type === 'chunk') {
+            onChunk(event.content);
+          } else if (event.type === 'done') {
+            onDone();
+            return;
+          }
+        } catch (e) {
+          console.error('JSON parse error', e);
+        }
+      }
+    }
+  }
+}

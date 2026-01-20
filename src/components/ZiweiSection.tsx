@@ -46,15 +46,27 @@ export default function ZiweiSection() {
         setLoading(true);
         setError(null);
         setSelectedPalace(null);
-        try {
-            const response = await ziweiApi.calculate(birthDate, birthHour);
-            setZiweiData(response);
-        } catch (err) {
-            setError("無法連接後端 API，請確認後端服務已啟動");
-            console.error("Ziwei API error:", err);
-        } finally {
-            setLoading(false);
-        }
+        setZiweiData(null);
+
+        await ziweiApi.calculateStream(
+            birthDate,
+            birthHour,
+            (data: ZiweiResponse) => {
+                setZiweiData({ ...data, interpretation: '' });
+            },
+            (chunk: string) => {
+                setZiweiData(prev => {
+                    if (!prev) return prev;
+                    return { ...prev, interpretation: (prev.interpretation || '') + chunk };
+                });
+            },
+            () => { setLoading(false); },
+            (err: any) => {
+                setError("無法連接後端 API，請確認後端服務已啟動");
+                console.error("Ziwei API error:", err);
+                setLoading(false);
+            }
+        );
     };
 
     const renderPalaceCell = (dz: string) => {
@@ -267,18 +279,25 @@ export default function ZiweiSection() {
 
                     {/* AI Interpretation */}
                     <div className="bg-white rounded-2xl border border-violet-100 shadow-lg overflow-hidden mb-8">
-                        <div className="bg-gradient-to-r from-violet-600 to-purple-600 px-6 py-4">
-                            <h3 className="text-lg font-medium text-white">🔮 AI 命格解析</h3>
-                        </div>
-                        <div className="p-6">
-                            <div className="prose prose-purple max-w-none text-slate-700">
-                                {ziweiData.interpretation?.split('\n').map((line, idx) => {
-                                    if (line.startsWith('##') || line.match(/^\d\./)) {
-                                        return <h4 key={idx} className="text-lg font-bold text-purple-800 mt-4 mb-2">{line.replace('## ', '').replace(/^\d\.\s*/, '')}</h4>;
-                                    } else if (line.trim()) {
-                                        return <p key={idx} className="text-slate-600 leading-relaxed mb-2">{line}</p>;
-                                    }
-                                    return null;
+                        <div className="bg-white/80 backdrop-blur-sm rounded-2xl p-8 border border-violet-100 shadow-lg">
+                            <h3 className="text-xl font-bold text-violet-900 mb-6 flex items-center gap-2">
+                                <span>📜</span> 命盤詳批
+                            </h3>
+                            <div className="prose prose-violet max-w-none">
+                                {(!ziweiData.interpretation || ziweiData.interpretation.length === 0) && (
+                                    <div className="flex items-center gap-3 text-violet-600 animate-pulse py-4">
+                                        <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                                            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                        </svg>
+                                        <span>紫微大師正在詳批中，請稍候...</span>
+                                    </div>
+                                )}
+                                {ziweiData.interpretation?.split('\n').map((line, i) => {
+                                    if (line.startsWith('### ')) return <h3 key={i} className="text-lg font-bold mt-4 mb-2 text-violet-800">{line.replace('###', '')}</h3>
+                                    if (line.startsWith('- ')) return <li key={i} className="ml-4 list-disc text-slate-700">{line.replace('-', '')}</li>
+                                    if (line.trim() === '') return <br key={i} />
+                                    return <p key={i} className="mb-2 text-slate-700 leading-relaxed">{line}</p>
                                 })}
                             </div>
                         </div>
@@ -287,9 +306,10 @@ export default function ZiweiSection() {
                     {/* Calculate Again */}
                     <button
                         onClick={() => setZiweiData(null)}
-                        className="w-full bg-slate-100 text-slate-600 font-medium py-3 rounded-xl hover:bg-slate-200 transition-all"
+                        disabled={loading}
+                        className={`w-full font-medium py-3 rounded-xl transition-all ${loading ? 'bg-slate-200 text-slate-400 cursor-not-allowed' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}
                     >
-                        重新計算
+                        {loading ? '分析中...' : '重新計算'}
                     </button>
                 </>
             )}

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { integrationApi, IntegrationResponse, baziApi, BaziResponse } from "@/services/api";
+import { integrationApi, IntegrationResponse, baziApi, BaziResponse, BaziChart } from "@/services/api";
 
 const SYSTEMS = [
     { id: "tarot", name: "塔羅", icon: "🃏", color: "from-purple-600 to-violet-600", needsBirthData: false, needsGender: false, needsPreciseTime: false, needsLocation: false },
@@ -89,7 +89,7 @@ export default function IntegrationSection() {
     const [birthCity, setBirthCity] = useState(CITIES[0]);  // 出生地點
     const [gender, setGender] = useState<"male" | "female">("male");  // 性別
     const [result, setResult] = useState<IntegrationResponse | null>(null);
-    const [baziData, setBaziData] = useState<BaziResponse | null>(null);
+    const [baziData, setBaziData] = useState<BaziChart | null>(null);
     const [loading, setLoading] = useState(false);
     const [loadingStage, setLoadingStage] = useState("");  // 載入階段提示
     const [error, setError] = useState<string | null>(null);
@@ -124,6 +124,12 @@ export default function IntegrationSection() {
     const analyzeIntegration = async () => {
         if (selectedSystems.length < 2) return;
 
+        // Validation: Tarot requires a question
+        if (selectedSystems.includes('tarot') && !question.trim()) {
+            setError("🔮 選擇塔羅牌系統時，請務必輸入具體問題，以便塔羅大師進行感應。");
+            return;
+        }
+
         setLoading(true);
         setError(null);
 
@@ -146,13 +152,21 @@ export default function IntegrationSection() {
                 const baziSys = SYSTEMS.find(s => s.id === 'bazi');
                 setLoadingStage(`${baziSys?.icon || '☯️'} 計算八字命盤...`);
                 baziResult = await baziApi.calculate(birthDate, effectiveBirthHour);
-                setBaziData(baziResult);
+                if (baziResult.success) {
+                    setBaziData(baziResult.chart);
+                }
             } else {
                 setBaziData(null);  // Clear bazi data if not selected
             }
 
-            // Build enriched question with all birth data context
-            let enrichedQuestion = question || "今年適合換工作嗎？";
+            // Build enriched question
+            let baseQuestion = question;
+            if (!question.trim()) {
+                // No question + No Tarot => Full Analysis
+                baseQuestion = "請針對我的命盤做「全盤解析」，詳細分析我的性格特質、天賦潛能、人生挑戰以及近期的流年運勢。";
+            }
+
+            let enrichedQuestion = baseQuestion;
 
             // Add birth data context
             if (needsBirthData) {
@@ -175,11 +189,13 @@ export default function IntegrationSection() {
             }
 
             // Add bazi chart if available
-            if (baziResult && baziResult.success) {
+            if (baziResult && baziResult.success && baziResult.chart) {
+                const chart = baziResult.chart;
+                const p = chart.pillars;
                 enrichedQuestion += `\n[八字命盤]\n`;
-                enrichedQuestion += `八字：${baziResult.year_gan}${baziResult.year_zhi} ${baziResult.month_gan}${baziResult.month_zhi} ${baziResult.day_gan}${baziResult.day_zhi} ${baziResult.hour_gan}${baziResult.hour_zhi}\n`;
-                enrichedQuestion += `日主：${baziResult.day_master}\n`;
-                enrichedQuestion += `農曆：${baziResult.lunar}`;
+                enrichedQuestion += `八字：${p.year.gan}${p.year.zhi} ${p.month.gan}${p.month.zhi} ${p.day.gan}${p.day.zhi} ${p.hour.gan}${p.hour.zhi}\n`;
+                enrichedQuestion += `日主：${chart.day_master}\n`;
+                enrichedQuestion += `農曆：${chart.lunar_date_str}`;
             }
 
             // Prepare structured birth data for backend calculations
@@ -192,13 +208,46 @@ export default function IntegrationSection() {
             } : undefined;
 
 
-            setLoadingStage(`✨ 正在整合 ${systemNames}（約30秒）...`);
-            const response = await integrationApi.analyze(enrichedQuestion, selectedSystems, birthDataForBackend);
-            setResult(response);
+            setLoadingStage(`🔮 大師將為您進行深度整合分析（約30秒）...`);
+
+            // 使用串流模式進行整合分析
+            let cumulativeAnalysis = "";
+            await integrationApi.analyzeStream(
+                enrichedQuestion,
+                selectedSystems,
+                birthDataForBackend,
+                (initialData) => {
+                    // 接收到計算出的原始數據（八字、塔羅等）
+                    // 確保 analysis 欄位存在，避免渲染時 split 報錯
+                    setResult({
+                        ...initialData,
+                        analysis: ""
+                    });
+                },
+                (chunk) => {
+                    // 接收到 AI 解析片段
+                    cumulativeAnalysis += chunk;
+                    setResult(prev => prev ? {
+                        ...prev,
+                        analysis: cumulativeAnalysis
+                    } : null);
+                },
+                () => {
+                    // 完成
+                    setLoading(false);
+                    setLoadingStage("");
+                },
+                (err) => {
+                    setError("分析過程中發生錯誤，請稍後再試");
+                    console.error("Integration stream error:", err);
+                    setLoading(false);
+                    setLoadingStage("");
+                }
+            );
+
         } catch (err) {
             setError("無法連接後端 API，請確認後端服務已啟動");
             console.error("Integration API error:", err);
-        } finally {
             setLoading(false);
             setLoadingStage("");
         }
@@ -366,6 +415,16 @@ export default function IntegrationSection() {
                     className="w-full bg-white border border-indigo-200 rounded-xl px-4 py-3.5 text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 resize-none"
                     rows={3}
                 />
+                {!question.trim() && !selectedSystems.includes('tarot') && (
+                    <p className="mt-2 text-xs text-indigo-500 flex items-center gap-1">
+                        💡 提示：若未輸入問題，AI 將為您進行「個人命盤全盤解析」。
+                    </p>
+                )}
+                {!question.trim() && selectedSystems.includes('tarot') && (
+                    <p className="mt-2 text-xs text-purple-500 font-medium flex items-center gap-1">
+                        ⚠️ 提示：選擇「塔羅」時，請務必輸入您的問題以進行占卜。
+                    </p>
+                )}
 
                 <button
                     onClick={analyzeIntegration}
@@ -388,23 +447,57 @@ export default function IntegrationSection() {
             {result && (
                 <>
                     {/* Birth Chart Summary (only show if Bazi is selected) */}
-                    {selectedSystems.includes("bazi") && baziData && baziData.success && (
+                    {selectedSystems.includes("bazi") && baziData && (
                         <div className="mb-8 bg-gradient-to-br from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
-                            <h3 className="text-lg font-medium text-amber-900 mb-4">📋 您的命盤資料</h3>
-                            <div className="flex flex-wrap gap-4 text-sm">
-                                <div className="bg-white rounded-lg px-4 py-2 border border-amber-200">
-                                    <span className="text-amber-600">八字：</span>
-                                    <span className="font-semibold text-amber-900">
-                                        {baziData.year_gan}{baziData.year_zhi} {baziData.month_gan}{baziData.month_zhi} {baziData.day_gan}{baziData.day_zhi} {baziData.hour_gan}{baziData.hour_zhi}
-                                    </span>
+                            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6 pb-4 border-b border-amber-200/50">
+                                <div>
+                                    <h3 className="text-xl font-bold text-amber-900 flex items-center gap-2">
+                                        📋 您的命盤資料
+                                    </h3>
+                                    <p className="text-amber-700 text-sm mt-1">{baziData.summary_short || `${baziData.day_master}日主，性格獨特。`}</p>
                                 </div>
-                                <div className="bg-white rounded-lg px-4 py-2 border border-amber-200">
-                                    <span className="text-amber-600">日主：</span>
-                                    <span className="font-semibold text-red-600">{baziData.day_master}</span>
+                                <div className="text-right">
+                                    <span className="text-xs text-amber-500 block uppercase tracking-wider mb-1">農曆日期</span>
+                                    <span className="font-semibold text-amber-900">{baziData.lunar_date_str}</span>
                                 </div>
-                                <div className="bg-white rounded-lg px-4 py-2 border border-amber-200">
-                                    <span className="text-amber-600">農曆：</span>
-                                    <span className="font-semibold text-amber-900">{baziData.lunar}</span>
+                            </div>
+
+                            <div className="flex justify-center gap-3 overflow-x-auto pb-2">
+                                {[
+                                    { key: 'year', label: '年柱' },
+                                    { key: 'month', label: '月柱' },
+                                    { key: 'day', label: '日柱' },
+                                    { key: 'hour', label: '時柱' }
+                                ].reverse().map((pInfo, i) => {
+                                    const p = baziData.pillars[pInfo.key as keyof typeof baziData.pillars];
+                                    const isDayMaster = pInfo.key === 'day';
+                                    return (
+                                        <div key={pInfo.key} className={`flex flex-col items-center min-w-[70px] pt-2 px-2 pb-3 rounded-xl border ${isDayMaster ? 'bg-amber-100/80 border-amber-400 shadow-sm' : 'bg-white border-amber-200'}`}>
+                                            <span className={`text-[11px] mb-2 font-medium ${isDayMaster ? 'text-amber-800' : 'text-amber-500'}`}>{pInfo.label}</span>
+                                            <div className="flex flex-col items-center gap-1">
+                                                <div className="text-2xl font-serif font-bold text-zinc-800">{p.gan}</div>
+                                                <div className="text-2xl font-serif font-bold text-zinc-800">{p.zhi}</div>
+                                            </div>
+                                            <div className={`mt-2 text-[10px] py-0.5 px-1.5 rounded-full ${isDayMaster ? 'bg-red-500 text-white' : 'bg-amber-50 text-amber-600'}`}>
+                                                {isDayMaster ? '日主' : p.ten_god}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="mt-6 grid grid-cols-2 md:grid-cols-4 gap-3">
+                                <div className="bg-white/50 p-3 rounded-xl border border-amber-100">
+                                    <span className="text-[10px] text-amber-500 block mb-1">五行屬性</span>
+                                    <span className="text-sm font-bold text-amber-900">{baziData.dm_wuxing || '未知'}</span>
+                                </div>
+                                <div className="bg-white/50 p-3 rounded-xl border border-amber-100">
+                                    <span className="text-[10px] text-amber-500 block mb-1">主要性格</span>
+                                    <span className="text-sm font-bold text-amber-900">{baziData.dm_trait || '獨特'}</span>
+                                </div>
+                                <div className="bg-white/50 p-3 rounded-xl border border-amber-100 col-span-2">
+                                    <span className="text-[10px] text-amber-500 block mb-1">格局意義</span>
+                                    <span className="text-[11px] text-amber-800 leading-tight">代表您的核心本質與內在動力。</span>
                                 </div>
                             </div>
                         </div>
@@ -434,9 +527,40 @@ export default function IntegrationSection() {
                                 </div>
                             )}
                             {selectedSystems.includes("bazi") && baziData && (
-                                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-200">
-                                    <h4 className="font-medium text-amber-900 flex items-center gap-2 mb-2">☯️ 八字觀點</h4>
-                                    <p className="text-sm text-amber-700">{baziData.day_master}日主，{baziData.lunar}</p>
+                                <div className="bg-gradient-to-br from-amber-50 to-orange-50 rounded-xl p-5 border border-amber-300 shadow-sm">
+                                    <h4 className="font-bold text-amber-900 flex items-center gap-2 mb-3">☯️ 八字觀點</h4>
+
+                                    {/* 1. Summary line */}
+                                    <div className="text-sm font-bold text-amber-800 mb-4 pb-2 border-b border-amber-200/50">
+                                        ✨ {baziData.summary_short}
+                                    </div>
+
+                                    {/* 2. Simplified 4-pillars with labels */}
+                                    <div className="flex gap-2 justify-between mb-4">
+                                        {[
+                                            { k: 'year', l: '年' },
+                                            { k: 'month', l: '月' },
+                                            { k: 'day', l: '日' },
+                                            { k: 'hour', l: '時' }
+                                        ].reverse().map(item => {
+                                            const p = baziData.pillars[item.k as keyof typeof baziData.pillars];
+                                            const isDay = item.k === 'day';
+                                            return (
+                                                <div key={item.k} className="flex flex-col items-center">
+                                                    <span className="text-[10px] text-amber-500 font-medium mb-1">{item.l}</span>
+                                                    <div className={`flex flex-col items-center bg-white px-2 py-1 rounded shadow-sm border ${isDay ? 'border-amber-500 ring-1 ring-amber-100' : 'border-amber-100'}`}>
+                                                        <span className={`text-sm font-bold ${isDay ? 'text-red-700' : 'text-zinc-800'}`}>{p.gan}</span>
+                                                        <span className="text-sm font-bold text-zinc-800">{p.zhi}</span>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* 3. Meaning hint */}
+                                    <div className="bg-amber-100/50 rounded-lg p-2 text-[11px] text-amber-700 leading-snug">
+                                        💡 <strong>解读：</strong>您命格屬<strong>{baziData.dm_wuxing}</strong>，象徵著「{baziData.dm_trait}」。此格局預示著良好的生命能量與獨特的處世風格。
+                                    </div>
                                 </div>
                             )}
                             {selectedSystems.includes("humandesign") && (
@@ -478,7 +602,14 @@ export default function IntegrationSection() {
                         </div>
                         <div className="p-8">
                             <div className="space-y-6">
-                                {result.analysis.split('\n').reduce((acc: React.ReactNode[], line, idx) => {
+                                {loading && !result.analysis && (
+                                    <div className="flex flex-col items-center justify-center py-12 text-center space-y-4 animate-pulse">
+                                        <div className="text-4xl mb-2">🔮</div>
+                                        <h4 className="text-xl font-medium text-indigo-900">正在融合東方與西方智慧，為您解讀命盤...</h4>
+                                        <p className="text-indigo-500">{loadingStage || "大師正在凝神感應中，請稍候..."}</p>
+                                    </div>
+                                )}
+                                {(result.analysis || "").split('\n').reduce((acc: React.ReactNode[], line, idx) => {
                                     // Handle Headers (###)
                                     if (line.startsWith('### ')) {
                                         const cleanLine = line.replace('### ', '');
