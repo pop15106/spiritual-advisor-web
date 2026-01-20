@@ -100,7 +100,14 @@ export default function TarotSection() {
         { label: "⚖️ 二擇一牌陣", value: "二擇一", desc: "當您面臨兩個選擇時，分別分析【選擇A】與【選擇B】的可能發展與結果。" },
         { label: "❤️ 關係發展牌陣", value: "關係發展", desc: "專注於人際或感情關係，分析【您的看法】、【對方的看法】、【阻礙】與【未來發展】。" },
         { label: "✡️ 六芒星牌陣", value: "六芒星", desc: "七張牌的深入分析，涵蓋【過去、現在、未來、建議、環境、阻礙、結果】，適合具體且複雜的問題。" },
-        { label: "✝️ 塞爾特十字", value: "塞爾特十字", desc: "最經典的十張牌大牌陣，全方位解析現況、阻礙、潛意識、過去、未來及最終結果，適合重大人生課題。" }
+        { label: "✝️ 塞爾特十字", value: "塞爾特十字", desc: "最經典的十張牌大牌陣，全方位解析現況、阻礙、潛意識、過去、未來及最終結果，適合重大人生課題。" },
+        { label: "❓ 是非題占卜", value: "是非題", desc: "抽三張牌，根據正逆位數量判斷「是」或「否」，適合封閉式問題。" },
+        { label: "💡 問題解決牌陣", value: "問題解決", desc: "三張牌分析問題核心、阻礙原因、解決方案，適合尋找突破點。" },
+        { label: "💎 鑽石牌陣", value: "鑽石牌陣", desc: "四張牌呈菱形排列，分析現況、阻礙、潛力與解決方案。" },
+        { label: "🧲 馬蹄鐵牌陣", value: "馬蹄鐵", desc: "七張牌呈倒V形，涵蓋過去、現在、未來、建議、環境、態度與結果。" },
+        { label: "💕 戀人金字塔", value: "戀人金字塔", desc: "五張牌專為感情設計，分析雙方現況、關係核心、挑戰與建議。" },
+        { label: "💗 心之聲牌陣", value: "心之聲", desc: "五張牌探索感情中的深層想法與真實情緒。" },
+        { label: "🌌 黃道十二宮", value: "黃道十二宮", desc: "十二張牌對應星座宮位，進行年度運勢或人生綜合分析。" }
     ];
 
     // 引導提問問題集
@@ -385,6 +392,15 @@ export default function TarotSection() {
                                 <span className="inline-block px-4 py-1.5 bg-purple-100 text-purple-700 rounded-full text-sm font-medium mb-3">
                                     使用牌陣：{spreadName}
                                 </span>
+                                {/* 是非題判定結果 */}
+                                {/* @ts-ignore - data type definition update pending in next step */}
+                                {interpretation.includes("判定結果為：") && (
+                                    <div className="text-center mb-4 mt-2">
+                                        <span className="inline-block px-6 py-2 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 rounded-full text-lg font-bold shadow-sm">
+                                            {interpretation.split("判定結果為：")[1].split("，")[0]}
+                                        </span>
+                                    </div>
+                                )}
                                 <h3 className="text-2xl font-bold text-zinc-800">📜 抽牌結果</h3>
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
