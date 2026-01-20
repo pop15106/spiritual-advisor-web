@@ -45,6 +45,7 @@ export interface TarotDrawResponse {
   positions: string[];
   spread?: string;
   interpretation?: string;
+  yes_no_result?: string;  // 是非題判定結果
 }
 
 export const tarotApi = {

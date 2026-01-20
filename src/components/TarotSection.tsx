@@ -85,6 +85,7 @@ export default function TarotSection() {
     const [positions, setPositions] = useState<string[]>([]);
     const [spreadName, setSpreadName] = useState("");
     const [interpretation, setInterpretation] = useState("");
+    const [yesNoResult, setYesNoResult] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [showGuide, setShowGuide] = useState(false);
@@ -133,6 +134,7 @@ export default function TarotSection() {
         setInterpretation("");
         setSpreadName("");
         setPositions([]);
+        setYesNoResult(null);
 
         try {
             let selectedSpreadType = spreadType;
@@ -155,6 +157,9 @@ export default function TarotSection() {
                     setCards(data.cards);
                     setPositions(data.positions);
                     setSpreadName(data.spread || "塔羅牌陣");
+                    if (data.yes_no_result) {
+                        setYesNoResult(data.yes_no_result);
+                    }
                 },
                 // onChunk (AI Text)
                 (chunk) => {
@@ -393,11 +398,10 @@ export default function TarotSection() {
                                     使用牌陣：{spreadName}
                                 </span>
                                 {/* 是非題判定結果 */}
-                                {/* @ts-ignore - data type definition update pending in next step */}
-                                {interpretation.includes("判定結果為：") && (
+                                {yesNoResult && (
                                     <div className="text-center mb-4 mt-2">
                                         <span className="inline-block px-6 py-2 bg-gradient-to-r from-amber-100 to-yellow-100 text-amber-800 rounded-full text-lg font-bold shadow-sm">
-                                            {interpretation.split("判定結果為：")[1].split("，")[0]}
+                                            {yesNoResult}
                                         </span>
                                     </div>
                                 )}
