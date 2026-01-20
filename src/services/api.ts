@@ -64,7 +64,8 @@ export const tarotApi = {
     onData: (data: TarotDrawResponse) => void,
     onChunk: (chunk: string) => void,
     onDone: () => void,
-    onError: (err: any) => void
+    onError: (err: any) => void,
+    onReset?: () => void
   ) => {
     try {
       const response = await fetch(`${API_BASE}/tarot/analyze`, {
@@ -72,7 +73,7 @@ export const tarotApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, spreadType }),
       });
-      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+      await handleStreamResponse(response, onData, onChunk, onDone, onError, onReset);
     } catch (err) {
       onError(err);
     }
@@ -451,7 +452,8 @@ async function handleStreamResponse(
   onData: (data: any) => void,
   onChunk: (chunk: string) => void,
   onDone: () => void,
-  onError: (err: any) => void
+  onError: (err: any) => void,
+  onReset?: () => void
 ) {
   if (!response.ok) throw new Error(response.statusText);
   if (!response.body) throw new Error('No response body');
@@ -484,8 +486,11 @@ async function handleStreamResponse(
           } else if (event.type === 'chunk') {
             onChunk(event.content);
           } else if (event.type === 'reset') {
-            // 模型切換，顯示提示訊息（之前的內容保留，但加上分隔線說明）
-            onChunk('\n\n---\n\n⚠️ **AI 模型切換中，正在重新生成解讀...**\n\n---\n\n');
+            // 模型切換，清空之前的內容並顯示提示
+            if (onReset) {
+              onReset();
+            }
+            onChunk('⚠️ **AI 模型切換中，正在重新生成解讀...**\n\n');
           } else if (event.type === 'done') {
             onDone();
             return;

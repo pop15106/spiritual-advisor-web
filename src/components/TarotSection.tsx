@@ -174,6 +174,10 @@ export default function TarotSection() {
                     console.error("Tarot Analysis Failed:", err);
                     setError("無法連接後端 API，請確認後端服務已啟動");
                     setLoading(false);
+                },
+                // onReset (模型切換時清空之前的解讀)
+                () => {
+                    setInterpretation("");
                 }
             );
         } catch (err) {
