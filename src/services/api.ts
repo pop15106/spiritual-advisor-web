@@ -483,6 +483,9 @@ async function handleStreamResponse(
             onData(event.payload);
           } else if (event.type === 'chunk') {
             onChunk(event.content);
+          } else if (event.type === 'reset') {
+            // 模型切換，顯示提示訊息（之前的內容保留，但加上分隔線說明）
+            onChunk('\n\n---\n\n⚠️ **AI 模型切換中，正在重新生成解讀...**\n\n---\n\n');
           } else if (event.type === 'done') {
             onDone();
             return;
