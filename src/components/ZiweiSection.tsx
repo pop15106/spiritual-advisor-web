@@ -65,6 +65,9 @@ export default function ZiweiSection() {
                 setError("無法連接後端 API，請確認後端服務已啟動");
                 console.error("Ziwei API error:", err);
                 setLoading(false);
+            },
+            () => {
+                setZiweiData(prev => prev ? ({ ...prev, interpretation: '' }) : null);
             }
         );
     };

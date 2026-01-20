@@ -126,6 +126,9 @@ export default function AstrologySection() {
                 setError("無法連接後端 API");
                 console.error(err);
                 setLoading(false);
+            },
+            () => {
+                setAstroData(prev => prev ? ({ ...prev, interpretation: '' }) : null);
             }
         );
     };

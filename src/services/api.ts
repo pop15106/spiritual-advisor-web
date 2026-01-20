@@ -147,7 +147,8 @@ export const baziApi = {
     onData: (data: BaziResponse) => void,
     onChunk: (chunk: string) => void,
     onDone: () => void,
-    onError: (err: any) => void
+    onError: (err: any) => void,
+    onReset?: () => void
   ) => {
     try {
       const response = await fetch(`${API_BASE}/bazi/calculate`, {
@@ -156,46 +157,7 @@ export const baziApi = {
         body: JSON.stringify({ birthDate, birthHour, gender, stream: true }),
       });
 
-      if (!response.ok) throw new Error(response.statusText);
-      if (!response.body) throw new Error('No response body');
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        buffer += decoder.decode(value, { stream: true });
-
-        // Process lines
-        const lines = buffer.split('\n\n');
-        buffer = lines.pop() || ''; // Keep incomplete line in buffer
-
-        for (const line of lines) {
-          if (line.startsWith('data: ')) {
-            const jsonStr = line.replace('data: ', '');
-            if (jsonStr === '[DONE]') {
-              onDone();
-              return;
-            }
-            try {
-              const event = JSON.parse(jsonStr);
-              if (event.type === 'data') {
-                onData(event.payload);
-              } else if (event.type === 'chunk') {
-                onChunk(event.content);
-              } else if (event.type === 'done') {
-                onDone();
-                return;
-              }
-            } catch (e) {
-              console.error('JSON parse error', e);
-            }
-          }
-        }
-      }
+      await handleStreamResponse(response, onData, onChunk, onDone, onError, onReset);
     } catch (err) {
       onError(err);
     }
@@ -256,7 +218,8 @@ export const humanDesignApi = {
     onData: (data: any) => void,
     onChunk: (chunk: string) => void,
     onDone: () => void,
-    onError: (err: any) => void
+    onError: (err: any) => void,
+    onReset?: () => void
   ) => {
     try {
       const response = await fetch(`${API_BASE}/humandesign/calculate`, {
@@ -264,7 +227,7 @@ export const humanDesignApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ birthDate, birthTime, birthCity, stream: true }),
       });
-      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+      await handleStreamResponse(response, onData, onChunk, onDone, onError, onReset);
     } catch (err) {
       onError(err);
     }
@@ -301,7 +264,8 @@ export const astrologyApi = {
     onData: (data: any) => void,
     onChunk: (chunk: string) => void,
     onDone: () => void,
-    onError: (err: any) => void
+    onError: (err: any) => void,
+    onReset?: () => void
   ) => {
     try {
       const response = await fetch(`${API_BASE}/astrology/calculate`, {
@@ -309,7 +273,7 @@ export const astrologyApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ birthDate, birthTime, birthCity, stream: true }),
       });
-      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+      await handleStreamResponse(response, onData, onChunk, onDone, onError, onReset);
     } catch (err) {
       onError(err);
     }
@@ -353,7 +317,8 @@ export const ziweiApi = {
     onData: (data: any) => void,
     onChunk: (chunk: string) => void,
     onDone: () => void,
-    onError: (err: any) => void
+    onError: (err: any) => void,
+    onReset?: () => void
   ) => {
     try {
       const response = await fetch(`${API_BASE}/ziwei/calculate`, {
@@ -361,7 +326,7 @@ export const ziweiApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ birthDate, birthHour, stream: true }),
       });
-      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+      await handleStreamResponse(response, onData, onChunk, onDone, onError, onReset);
     } catch (err) {
       onError(err);
     }
@@ -424,7 +389,8 @@ export const integrationApi = {
     onData: (data: any) => void,
     onChunk: (chunk: string) => void,
     onDone: () => void,
-    onError: (err: any) => void
+    onError: (err: any) => void,
+    onReset?: () => void
   ) => {
     try {
       const response = await fetch(`${API_BASE}/integration/analyze`, {
@@ -432,7 +398,7 @@ export const integrationApi = {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, systems, birth_data: birthData }),
       });
-      await handleStreamResponse(response, onData, onChunk, onDone, onError);
+      await handleStreamResponse(response, onData, onChunk, onDone, onError, onReset);
     } catch (err) {
       onError(err);
     }

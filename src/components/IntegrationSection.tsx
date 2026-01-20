@@ -242,6 +242,11 @@ export default function IntegrationSection() {
                     console.error("Integration stream error:", err);
                     setLoading(false);
                     setLoadingStage("");
+                },
+                () => {
+                    // onReset
+                    cumulativeAnalysis = ""; // Clear local buffer
+                    setResult(prev => prev ? ({ ...prev, analysis: '' }) : null);
                 }
             );
 

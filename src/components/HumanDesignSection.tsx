@@ -79,6 +79,9 @@ export default function HumanDesignSection() {
                 setError("無法連接後端 API，請確認後端服務已啟動");
                 console.error("Human Design API error:", err);
                 setLoading(false);
+            },
+            () => {
+                setHdData(prev => prev ? ({ ...prev, interpretation: '' }) : null);
             }
         );
     };

@@ -49,6 +49,10 @@ export default function BaziSection() {
                     console.error('Calculation failed:', err);
                     setError("無法連接後端 API，請確認後端服務已啟動");
                     setLoading(false);
+                },
+                // onReset
+                () => {
+                    setBaziData(prev => prev ? ({ ...prev, interpretation: '' }) : null);
                 }
             );
         } catch (err) { // This catch block handles errors that occur before the stream even starts (e.g., network issues)
