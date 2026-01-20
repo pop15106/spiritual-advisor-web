@@ -1,4 +1,4 @@
-/**
+﻿/**
  * Spiritual AI Advisor - API Service
  * 後端 API 連接服務
  */
@@ -490,7 +490,7 @@ async function handleStreamResponse(
             if (onReset) {
               onReset();
             }
-            onChunk('⚠️ **AI 模型切換中，正在重新生成解讀...**\n\n');
+            // 靜默重新開始
           } else if (event.type === 'done') {
             onDone();
             return;
@@ -502,3 +502,5 @@ async function handleStreamResponse(
     }
   }
 }
+
+
